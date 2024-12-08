@@ -1,0 +1,6 @@
+@ToyDb_HostAddress = http://localhost:5080
+
+GET {{ToyDb_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

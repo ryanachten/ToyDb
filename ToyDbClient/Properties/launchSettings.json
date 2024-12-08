@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ToyDbClient": {
+      "commandName": "Project",
+      "commandLineArgs": "set Hello=World"
+    }
+  }
+}
