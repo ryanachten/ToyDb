@@ -26,3 +26,6 @@ The current capabilities we aim to explore are:
 - Run the client via:
     - Get value: `dotnet run --project .\ToyDbClient\ToyDbClient.csproj -- get Hello`
     - Set value: `dotnet run --project .\ToyDbClient\ToyDbClient.csproj -- set Hello=World`
+
+## TODO
+- Provide support for different scalar data types (currently only strings are supported)

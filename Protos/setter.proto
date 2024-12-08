@@ -1,14 +1,16 @@
 syntax = "proto3";
 
+import "google/protobuf/wrappers.proto";
+
 service Setter {
   rpc SetValue (SetRequest) returns (SetResponse);
 }
 
 message SetRequest {
   string key = 1;
-  string value = 2;
+  google.protobuf.StringValue value = 2;
 }
 
 message SetResponse {
-  string value = 1;
+  google.protobuf.StringValue value = 1;
 }
