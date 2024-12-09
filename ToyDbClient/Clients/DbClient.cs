@@ -1,6 +1,6 @@
 ﻿using Grpc.Net.Client;
 
-namespace ToyDbClient;
+namespace ToyDbClient.Clients;
 
 internal class DbClient
 {

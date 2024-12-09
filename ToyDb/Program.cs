@@ -12,4 +12,4 @@ var app = builder.Build();
 app.MapGrpcService<GetterService>();
 app.MapGrpcService<SetterService>();
 
-app.Run();
+await app.RunAsync();
