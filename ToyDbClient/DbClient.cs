@@ -20,6 +20,12 @@ internal class DbClient
         return response.Value;
     }
 
+    public async Task<Dictionary<string, string>> GetAllValues()
+    {
+        var response = await _getterClient.GetAllValuesAsync(new GetAllValuesRequest());
+        return response.Values.ToDictionary((kvp) => kvp.Key, (kvp) => kvp.Value);
+    }
+
     public async Task<string> SetValue(string key, string? value)
     {
         var response = await _setterClient.SetValueAsync(new SetRequest { Key = key, Value = value });
