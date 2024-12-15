@@ -5,11 +5,10 @@ namespace ToyDbClient;
 
 internal static class Program
 {
-    private static readonly CommandService _commandService = new();
-
     private static async Task<int> Main(string[] args)
     {
-        var rootCommand = _commandService.CreateRootCommand();
+        var commandService = new CommandService();
+        var rootCommand = commandService.CreateRootCommand();
         return await rootCommand.InvokeAsync(args);
     }
 }

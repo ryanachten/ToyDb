@@ -1,8 +1,11 @@
-﻿namespace ToyDb.Repositories;
+﻿using ToyDb.Models;
 
-public interface IDatabaseRepository
+namespace ToyDb.Repositories
 {
-    string? GetValue(string key);
-    Dictionary<string, string?> GetValues();
-    string? SetValue(string key, string value);
+    public interface IDatabaseRepository
+    {
+        DatabaseEntry GetValue(string key);
+        Dictionary<string, DatabaseEntry> GetValues();
+        DatabaseEntry SetValue(string key, DatabaseEntry value);
+    }
 }

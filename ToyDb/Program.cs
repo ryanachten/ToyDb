@@ -9,7 +9,6 @@ builder.Services.AddSingleton<IDatabaseRepository, DatabaseRepository>();
 
 var app = builder.Build();
 
-app.MapGrpcService<GetterService>();
-app.MapGrpcService<SetterService>();
+app.MapGrpcService<DataService>();
 
 await app.RunAsync();

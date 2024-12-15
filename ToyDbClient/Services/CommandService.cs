@@ -40,7 +40,7 @@ public class CommandService
         getCommand.SetHandler(async (key, dbAddress) =>
         {
             var client = new DbClient(dbAddress);
-            var value = await client.GetValue(key);
+            var value = await client.GetValue<string>(key);
             Console.WriteLine(value);
         }, keyArgument, _dbAddressOption);
 
@@ -49,6 +49,7 @@ public class CommandService
 
     private Command CreateSetCommand()
     {
+        // TODO: it would be nice to be able to set data type as part of this CLI
         var keyValuePairArgument = new Argument<string>("keyValue", "The key-value pair in the format key=value");
         var setCommand = new Command("set", "Set a key-value pair")
         {
@@ -82,7 +83,7 @@ public class CommandService
         listCommand.SetHandler(async (dbAddress) =>
         {
             var client = new DbClient(dbAddress);
-            var values = await client.GetAllValues();
+            var values = await client.PrintAllValues();
             foreach (var value in values)
             {
                 Console.WriteLine($"{value.Key}: {value.Value}");

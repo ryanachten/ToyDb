@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+import "google/protobuf/wrappers.proto";
+
+option csharp_namespace = "ToyDb.Messages";
+
+enum DataType {
+  Null = 0;
+  Bool = 1;
+  Int = 2;
+  Long = 3;
+  Float = 4;
+  Double = 5;
+  String = 6;
+}
+
+message KeyValueRequest {
+	DataType type = 1;
+	string key = 2;
+	google.protobuf.BytesValue value = 3;
+}
+
+message KeyValueResponse {
+	DataType type = 1;
+	string key = 2;
+	google.protobuf.BytesValue value = 3;
+}
+
+service Data {
+	rpc GetValue (GetRequest) returns (KeyValueResponse);
+	rpc GetAllValues (GetAllValuesRequest) returns (GetAllValuesReresponse);
+	rpc SetValue (KeyValueRequest) returns (KeyValueResponse);
+}
+
+message GetRequest {
+	string key = 1;
+}
+
+message GetAllValuesRequest {
+}
+
+message GetAllValuesReresponse {
+	repeated KeyValueResponse values = 1;
+}
+

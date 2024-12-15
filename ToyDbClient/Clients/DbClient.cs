@@ -1,34 +1,34 @@
 ﻿using Grpc.Net.Client;
+using ToyDb.Messages;
 
 namespace ToyDbClient.Clients;
 
 internal class DbClient
 {
-    private readonly Getter.GetterClient _getterClient;
-    private readonly Setter.SetterClient _setterClient;
+    private readonly Data.DataClient _dataClient;
 
     public DbClient(string dbAddress)
     {
         var channel = GrpcChannel.ForAddress(dbAddress);
-        _getterClient = new Getter.GetterClient(channel);
-        _setterClient = new Setter.SetterClient(channel);
+        _dataClient = new Data.DataClient(channel);
     }
 
-    public async Task<string> GetValue(string key)
+    public async Task<T> GetValue<T>(string key)
     {
-        var response = await _getterClient.GetValueAsync(new GetRequest { Key = key });
-        return response.Value;
+        var response = await _dataClient.GetValueAsync(new GetRequest { Key = key });
+        return DbSerializer.Deserialize<T>(response);
     }
 
-    public async Task<Dictionary<string, string>> GetAllValues()
+    public async Task<T> SetValue<T>(string key, T value)
     {
-        var response = await _getterClient.GetAllValuesAsync(new GetAllValuesRequest());
-        return response.Values.ToDictionary((kvp) => kvp.Key, (kvp) => kvp.Value);
+        var keyValuePair = DbSerializer.Serialize(key, value);
+        var response = await _dataClient.SetValueAsync(keyValuePair);
+        return DbSerializer.Deserialize<T>(response);
     }
 
-    public async Task<string> SetValue(string key, string? value)
+    public async Task<Dictionary<string, string>> PrintAllValues()
     {
-        var response = await _setterClient.SetValueAsync(new SetRequest { Key = key, Value = value });
-        return response.Value;
+        var response = await _dataClient.GetAllValuesAsync(new GetAllValuesRequest());
+        return response.Values.ToDictionary((kvp) => kvp.Key, (kvp) => kvp.Value.ToStringUtf8());
     }
 }
