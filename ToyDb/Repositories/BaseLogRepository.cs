@@ -1,15 +1,23 @@
 ﻿using Google.Protobuf;
-using Microsoft.Extensions.Options;
 using ToyDb.Messages;
 using ToyDb.Models;
 
-namespace ToyDb.Services.AppendOnlyLogService;
+namespace ToyDb.Repositories;
 
-public class AppendOnlyLogService(IOptions<AppendOnlyLogOptions> options) : IAppendOnlyLogService
+/// <summary>
+/// Base class for persisting logs to file
+/// </summary>
+public abstract class BaseLogRepository
 {
-    private readonly string _logLocation = options.Value.Location;
     private readonly char _logDelimiter = ':';
     private readonly int _expectedLogPartCount = 3;
+    private readonly string _logLocation;
+
+    protected BaseLogRepository(string logLocation)
+    {
+        _logLocation = logLocation;
+        EnsureLogFileIsPresent();
+    }
 
     /// <summary>
     /// Appends database entry to log
@@ -96,5 +104,13 @@ public class AppendOnlyLogService(IOptions<AppendOnlyLogOptions> options) : IApp
             throw new InvalidDataException($"Data type is not valid. Received {rawDataType}");
 
         return new DatabaseEntry() { Key = key, Type = dataType, Data = ByteString.FromBase64(data) };
+    }
+
+    private void EnsureLogFileIsPresent()
+    {
+        if (!File.Exists(_logLocation))
+        {
+            using FileStream fs = File.Create(_logLocation);
+        }
     }
 }
