@@ -15,7 +15,18 @@ namespace ToyDb.Repositories
         public DatabaseFileRepository(IAppendOnlyLogService appendOnlyLogService)
         {
             _appendOnlyLogService = appendOnlyLogService;
-            RestoreIndexFromFile(); // TODO: find a better way to call this, doesn't work
+        }
+
+        /// <summary>
+        /// Restores database index from log file
+        /// </summary>
+        public async Task RestoreIndexFromFile()
+        {
+            var entries = await _appendOnlyLogService.ReadAll(CancellationToken.None);
+            foreach (var item in entries)
+            {
+                _index.Add(item.Key, item.Value.Item2);
+            }
         }
 
         public async Task<DatabaseEntry> GetValue(string key, CancellationToken cancellationToken)
@@ -40,15 +51,6 @@ namespace ToyDb.Repositories
             _index[key] = offset;
             
             return value;
-        }
-
-        private async Task RestoreIndexFromFile()
-        {
-            var entries = await _appendOnlyLogService.ReadAll(CancellationToken.None);
-            foreach (var item in entries)
-            {
-                _index.Add(item.Key, item.Value.Item2);
-            }
         }
     }
 }
