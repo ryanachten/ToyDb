@@ -1,34 +1,21 @@
 ﻿using Microsoft.Extensions.Options;
-using ToyDb.Repositories;
 using ToyDb.Repositories.DataStoreRepository;
 using ToyDb.Repositories.WriteAheadLogRepository;
 using ToyDb.Services;
 
 namespace ToyDb.Extensions;
 
-public static class DataStorageServiceExtensions
+public static class ServiceRegistrationExtensions
 {
-    /// <summary>
-    /// Registers the database storage service and all of its dependencies
-    /// </summary>
-    public static async Task AddDataStorageService(this WebApplicationBuilder builder)
+    public static void RegisterServices(this WebApplicationBuilder builder)
     {
-        /**
-         * This whole process is complicated because we need to restore the index from a file during inititialization
-         * which means we need to instantiate instances instead of just relying on DI
-         */
+        builder.AddDataStorageRepository();
+        builder.AddWriteAheadLogRepository();
 
-        var walRepository = CreateWriteAheadLogRepository(builder);
-        var dataStoreRepository = CreateDataStorageRepository(builder);
-
-        var dataStorageService = new DataStorageService(dataStoreRepository, walRepository);
-
-        await dataStorageService.RestoreIndexFromFile();
-
-        builder.Services.AddSingleton<IDatabaseRepository, DataStorageService>((provider) => dataStorageService);
+        builder.Services.AddSingleton<IDataStorageService, DataStorageService>();
     }
 
-    private static DataStoreRepository CreateDataStorageRepository(WebApplicationBuilder builder)
+    private static void AddDataStorageRepository(this WebApplicationBuilder builder)
     {
         var storeOptions = builder.Configuration.GetSection(DataStoreOptions.Key).Get<DataStoreOptions>();
         if (storeOptions == null) throw new InvalidOperationException("Missing 'DataStore' configuration");
@@ -37,11 +24,9 @@ public static class DataStorageServiceExtensions
 
         builder.Services.AddSingleton<IDataStoreRepository, DataStoreRepository>((provider) => storeRepository)
             .AddOptions<WriteAheadLogOptions>().Bind(builder.Configuration.GetSection(DataStoreOptions.Key));
-
-        return storeRepository;
     }
 
-    private static WriteAheadLogRepository CreateWriteAheadLogRepository(WebApplicationBuilder builder)
+    private static WriteAheadLogRepository AddWriteAheadLogRepository(this WebApplicationBuilder builder)
     {
         var walOptions = builder.Configuration.GetSection(WriteAheadLogOptions.Key).Get<WriteAheadLogOptions>();
         if (walOptions == null) throw new InvalidOperationException("Missing 'WriteAheadLog' configuration");

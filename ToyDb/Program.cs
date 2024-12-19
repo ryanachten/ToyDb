@@ -5,7 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddGrpc();
 
-await builder.AddDataStorageService();
+builder.RegisterServices();
 
 var app = builder.Build();
 
