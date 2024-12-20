@@ -9,7 +9,7 @@ namespace ToyDb.Services
         /// <summary>
         /// Inmemory key - log offset lookup
         /// </summary>
-        private readonly Dictionary<string, long> _index = [];
+        private Dictionary<string, long> _index = [];
         private readonly IDataStoreRepository _storeService;
         private readonly IWriteAheadLogRepository _walService;
 
@@ -19,6 +19,13 @@ namespace ToyDb.Services
             _walService = walService;
 
             RestoreIndexFromStore();
+        }
+
+        public void CompactLogs()
+        {
+            var entities = _storeService.GetLatestEntries().Select(x => x.Value.Item1);
+            _storeService.CreateNewLogFile();
+            _index = _storeService.AppendRange(entities);
         }
 
         public DatabaseEntry GetValue(string key)

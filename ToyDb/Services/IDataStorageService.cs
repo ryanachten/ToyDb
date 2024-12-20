@@ -7,5 +7,6 @@ namespace ToyDb.Services
         DatabaseEntry GetValue(string key);
         Dictionary<string, DatabaseEntry> GetValues();
         DatabaseEntry SetValue(string key, DatabaseEntry value);
+        void CompactLogs();
     }
 }
