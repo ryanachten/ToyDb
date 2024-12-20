@@ -3,8 +3,8 @@
 namespace ToyDb.Services.LogCompaction;
 
 public sealed class LogCompactionProcess(
-    IOptions<LogCompactionOptions> options,
-    IDataStorageService dataStorageService) : IHostedService, IDisposable
+    IServiceProvider servicesProvider,
+    IOptions<LogCompactionOptions> options) : IHostedService, IDisposable
 {
     private Timer? _timer = null;
 
@@ -27,5 +27,12 @@ public sealed class LogCompactionProcess(
         return Task.CompletedTask;
     }
 
-    private void CompactLogs(object? state) => dataStorageService.CompactLogs();
+    private void CompactLogs(object? state)
+    {
+        using var scope = servicesProvider.CreateScope();
+
+        var dataStorageService = scope.ServiceProvider.GetRequiredService<IDataStorageService>();
+
+        dataStorageService.CompactLogs();
+    }
 }

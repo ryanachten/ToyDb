@@ -9,8 +9,8 @@ public class DatabaseEntry
     public required DataType Type { get; set; }
     public required ByteString Data { get; set; }
 
-    public static DatabaseEntry Empty() => new () {
-        Key = string.Empty,
+    public static DatabaseEntry Empty(string key) => new () {
+        Key = key,
         Type = DataType.Null,
         Data = ByteString.Empty
     };

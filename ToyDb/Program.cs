@@ -5,7 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddGrpc();
 
-builder.RegisterServices();
+builder.RegisterServiceCollection();
 
 var app = builder.Build();
 
