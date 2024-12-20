@@ -21,18 +21,18 @@ namespace ToyDb.Services
             RestoreIndexFromStore();
         }
 
-        public DatabaseEntry GetValue(string key, CancellationToken cancellationToken)
+        public DatabaseEntry GetValue(string key)
         {
             var hasOffset = _index.TryGetValue(key, out var offset);
 
             if (!hasOffset) return DatabaseEntry.Empty();
 
-            return _storeService.Read(offset, cancellationToken);
+            return _storeService.GetValue(offset);
         }
 
-        public Dictionary<string, DatabaseEntry> GetValues(CancellationToken cancellationToken)
+        public Dictionary<string, DatabaseEntry> GetValues()
         {
-            var entries = _storeService.ReadAll(cancellationToken);
+            var entries = _storeService.GetLatestEntries();
             return entries.ToDictionary((x) => x.Key, (x) => x.Value.Item1);
         }
 
@@ -41,12 +41,11 @@ namespace ToyDb.Services
         /// </summary>
         /// <param name="key">Key to assign value to</param>
         /// <param name="value">Value to assign to key</param>
-        /// <param name="cancellationToken">Token to cancel operation</param>
         /// <returns>Saved database entry</returns>
-        public DatabaseEntry SetValue(string key, DatabaseEntry value, CancellationToken cancellationToken)
+        public DatabaseEntry SetValue(string key, DatabaseEntry value)
         {
-            _walService.Append(key, value, cancellationToken);
-            var offset = _storeService.Append(key, value, cancellationToken);
+            _walService.Append(key, value);
+            var offset = _storeService.Append(key, value);
 
             _index[key] = offset;
 
@@ -58,7 +57,7 @@ namespace ToyDb.Services
         /// </summary>
         private void RestoreIndexFromStore()
         {
-            var entries = _storeService.ReadAll(CancellationToken.None);
+            var entries = _storeService.GetLatestEntries();
             foreach (var item in entries)
             {
                 _index.Add(item.Key, item.Value.Item2);

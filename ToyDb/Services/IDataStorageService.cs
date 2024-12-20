@@ -4,8 +4,8 @@ namespace ToyDb.Services
 {
     public interface IDataStorageService
     {
-        DatabaseEntry GetValue(string key, CancellationToken cancellationToken);
-        Dictionary<string, DatabaseEntry> GetValues(CancellationToken cancellationToken);
-        DatabaseEntry SetValue(string key, DatabaseEntry value, CancellationToken cancellationToken);
+        DatabaseEntry GetValue(string key);
+        Dictionary<string, DatabaseEntry> GetValues();
+        DatabaseEntry SetValue(string key, DatabaseEntry value);
     }
 }

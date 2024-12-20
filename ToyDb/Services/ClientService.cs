@@ -11,7 +11,7 @@ public class ClientService(IDataStorageService databaseRepository) : Data.DataBa
 {
     public override Task<KeyValueResponse> GetValue(GetRequest request, ServerCallContext context)
     {
-        var value = databaseRepository.GetValue(request.Key, context.CancellationToken);
+        var value = databaseRepository.GetValue(request.Key);
         var response = new KeyValueResponse()
         {
             Key = request.Key,
@@ -23,7 +23,7 @@ public class ClientService(IDataStorageService databaseRepository) : Data.DataBa
 
     public override Task<GetAllValuesReresponse> GetAllValues(GetAllValuesRequest request, ServerCallContext context)
     {
-        var values = databaseRepository.GetValues(context.CancellationToken);
+        var values = databaseRepository.GetValues();
         var keyValuePairs = values.Select(x => new KeyValueResponse()
         {
             Key = x.Key,
@@ -43,7 +43,7 @@ public class ClientService(IDataStorageService databaseRepository) : Data.DataBa
             Key = request.Key,
             Type = request.Type,
             Data = request.Value
-        }, context.CancellationToken);
+        });
 
         var response = new KeyValueResponse()
         {
