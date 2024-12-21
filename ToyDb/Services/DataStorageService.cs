@@ -9,19 +9,19 @@ namespace ToyDb.Services
     {
         private readonly IKeyOffsetCache _keyOffsetCache;
         private readonly IKeyEntryCache _keyEntryCache;
-        private readonly IDataStoreRepository _storeService;
-        private readonly IWriteAheadLogRepository _walService;
+        private readonly IDataStoreRepository _storeRepository;
+        private readonly IWriteAheadLogRepository _walRepository;
 
         public DataStorageService(
             IKeyOffsetCache keyOffsetCache,
             IKeyEntryCache keyEntryCache,
-            IDataStoreRepository storeService,
-            IWriteAheadLogRepository walService)
+            IDataStoreRepository storeRepository,
+            IWriteAheadLogRepository walRepository)
         {
             _keyOffsetCache = keyOffsetCache;
             _keyEntryCache = keyEntryCache;
-            _storeService = storeService;
-            _walService = walService;
+            _storeRepository = storeRepository;
+            _walRepository = walRepository;
 
             RestoreIndexFromStore();
         }
@@ -31,11 +31,13 @@ namespace ToyDb.Services
         /// </summary>
         public void CompactLogs()
         {
-            var entities = _storeService.GetLatestEntries().Select(x => x.Value.Item1);
+            if (!_storeRepository.HasRedundantData()) return;
 
-            _storeService.CreateNewLogFile();
+            var entities = _storeRepository.GetLatestEntries().Select(x => x.Value.Item1);
 
-            var updatedIndex = _storeService.AppendRange(entities);
+            _storeRepository.CreateNewLogFile();
+
+            var updatedIndex = _storeRepository.AppendRange(entities);
             _keyOffsetCache.Reset(updatedIndex);
         }
 
@@ -51,7 +53,7 @@ namespace ToyDb.Services
             if (!hasOffset) return DatabaseEntry.Empty(key);
 
             // If we have a key, locate entry from file and cache result for later
-            var storedEntry = _storeService.GetValue(offset);
+            var storedEntry = _storeRepository.GetValue(offset);
             _keyEntryCache.Set(key, storedEntry);
 
             return storedEntry;
@@ -59,7 +61,7 @@ namespace ToyDb.Services
 
         public Dictionary<string, DatabaseEntry> GetValues()
         {
-            var entries = _storeService.GetLatestEntries();
+            var entries = _storeRepository.GetLatestEntries();
             return entries.ToDictionary((x) => x.Key, (x) => x.Value.Item1);
         }
 
@@ -71,8 +73,8 @@ namespace ToyDb.Services
         /// <returns>Saved database entry</returns>
         public DatabaseEntry SetValue(string key, DatabaseEntry value)
         {
-            _walService.Append(key, value);
-            var offset = _storeService.Append(key, value);
+            _walRepository.Append(key, value);
+            var offset = _storeRepository.Append(key, value);
 
             _keyOffsetCache.Set(key, offset);
 
@@ -84,7 +86,7 @@ namespace ToyDb.Services
         /// </summary>
         private void RestoreIndexFromStore()
         {
-            var entries = _storeService.GetLatestEntries();
+            var entries = _storeRepository.GetLatestEntries();
             
             var updatedIndex = entries.ToDictionary(x => x.Key, x => x.Value.Item2);
             _keyOffsetCache.Reset(updatedIndex);

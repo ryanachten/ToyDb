@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Options;
+using System.Linq;
 using ToyDb.Models;
 
 namespace ToyDb.Repositories.DataStoreRepository
@@ -20,6 +21,30 @@ namespace ToyDb.Repositories.DataStoreRepository
             using BinaryReader binaryReader = new(fileStream);
 
             return ReadEntry(binaryReader);
+        }
+
+        /// <summary>
+        /// Checks file for data redundancies, including duplicate keys
+        /// TODO: support removing null values
+        /// </summary>
+        /// <returns></returns>
+        public bool HasRedundantData()
+        {
+            using FileStream fileStream = new(logLocation, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using BinaryReader binaryReader = new(fileStream);
+
+            var keys = new HashSet<string>();
+
+            while (fileStream.Position < fileStream.Length)
+            {
+                var entry = ReadEntry(binaryReader);
+                
+                if (keys.Contains(entry.Key)) return true;
+
+                keys.Add(entry.Key);
+            }
+
+            return false;
         }
 
         /// <summary>

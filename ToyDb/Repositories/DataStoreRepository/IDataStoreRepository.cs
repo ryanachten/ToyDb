@@ -9,4 +9,5 @@ public interface IDataStoreRepository
     Dictionary<string, (DatabaseEntry, long)> GetLatestEntries();
     Dictionary<string, long> AppendRange(IEnumerable<DatabaseEntry> entries);
     void CreateNewLogFile();
+    bool HasRedundantData();
 }
