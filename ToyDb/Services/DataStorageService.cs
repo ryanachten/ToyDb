@@ -26,9 +26,13 @@ namespace ToyDb.Services
             RestoreIndexFromStore();
         }
 
+        /// <summary>
+        /// Compacts logs by storing only the latest entries in a new file
+        /// </summary>
         public void CompactLogs()
         {
             var entities = _storeService.GetLatestEntries().Select(x => x.Value.Item1);
+
             _storeService.CreateNewLogFile();
 
             var updatedIndex = _storeService.AppendRange(entities);
@@ -37,15 +41,17 @@ namespace ToyDb.Services
 
         public DatabaseEntry GetValue(string key)
         {
+            // First attempt to entry result in cache
             var hasEntry = _keyEntryCache.TryGetValue(key, out var cachedEntry);
             if (hasEntry && cachedEntry != null) return cachedEntry;
             if (hasEntry && cachedEntry == null) return DatabaseEntry.Empty(key);
 
+            // Then attempt to locate key in cache (if absent, we probably don't have a result)
             var hasOffset = _keyOffsetCache.TryGetValue(key, out long offset);
             if (!hasOffset) return DatabaseEntry.Empty(key);
 
+            // If we have a key, locate entry from file and cache result for later
             var storedEntry = _storeService.GetValue(offset);
-            
             _keyEntryCache.Set(key, storedEntry);
 
             return storedEntry;

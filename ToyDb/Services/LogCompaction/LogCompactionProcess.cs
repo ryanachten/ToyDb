@@ -15,7 +15,7 @@ public sealed class LogCompactionProcess(
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _timer = new Timer(CompactLogs, null, TimeSpan.Zero, TimeSpan.FromSeconds(options.Value.CompactionInterval));
+        _timer = new Timer(CompactLogs, null, TimeSpan.FromSeconds(options.Value.CompactionInterval), TimeSpan.FromSeconds(options.Value.CompactionInterval));
 
         return Task.CompletedTask;
     }

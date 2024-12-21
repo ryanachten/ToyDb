@@ -12,6 +12,7 @@ public abstract class BaseLogRepository
     protected string logLocation;
 
     private readonly string _parentFolder;
+    private string _logDirectory;
 
     protected BaseLogRepository(string logLocation)
     {
@@ -68,9 +69,9 @@ public abstract class BaseLogRepository
     public void CreateNewLogFile()
     {
         var fileName = DateTime.UtcNow.ToString("yyyy-MM-dd_HH-mm-ss");
-        var filePath = Path.Combine(_parentFolder, fileName);
+        var filePath = Path.Combine(_logDirectory, fileName);
 
-        Directory.CreateDirectory(_parentFolder);
+        Directory.CreateDirectory(_logDirectory);
         using FileStream fs = File.Create(filePath);
 
         this.logLocation = filePath;
@@ -91,13 +92,16 @@ public abstract class BaseLogRepository
 
     private void GetLatestLogFilePath()
     {
-        if (!Directory.Exists(_parentFolder))
+        var currentDirectory = Directory.GetCurrentDirectory();
+        _logDirectory = Path.Combine(currentDirectory, _parentFolder);
+
+        if (!Directory.Exists(_logDirectory))
         {
             CreateNewLogFile();
             return;
         }
 
-        var latestFilePath = Directory.EnumerateFiles(_parentFolder).Max();
+        var latestFilePath = Directory.EnumerateFiles(_logDirectory).Max();
         if (string.IsNullOrWhiteSpace(latestFilePath))
         {
             CreateNewLogFile();
