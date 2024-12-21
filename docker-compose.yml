@@ -1,0 +1,16 @@
+services:
+  toydb-1:
+    image: ${DOCKER_REGISTRY-}toydb
+    build:
+      context: .
+      dockerfile: ToyDb/Dockerfile
+  toydb-2:
+    image: ${DOCKER_REGISTRY-}toydb
+    build:
+      context: .
+      dockerfile: ToyDb/Dockerfile
+  toydb-3:
+    image: ${DOCKER_REGISTRY-}toydb
+    build:
+      context: .
+      dockerfile: ToyDb/Dockerfile
