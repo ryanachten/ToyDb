@@ -38,7 +38,7 @@ namespace ToyDb.Services
             _storeRepository.CreateNewLogFile();
 
             var updatedIndex = _storeRepository.AppendRange(entities);
-            _keyOffsetCache.Reset(updatedIndex);
+            _keyOffsetCache.Replace(updatedIndex);
         }
 
         public DatabaseEntry GetValue(string key)
@@ -46,11 +46,11 @@ namespace ToyDb.Services
             // First attempt to entry result in cache
             var hasEntry = _keyEntryCache.TryGetValue(key, out var cachedEntry);
             if (hasEntry && cachedEntry != null) return cachedEntry;
-            if (hasEntry && cachedEntry == null) return DatabaseEntry.Empty(key);
+            if (hasEntry && cachedEntry == null) return DatabaseEntry.Null(key);
 
             // Then attempt to locate key in cache (if absent, we probably don't have a result)
             var hasOffset = _keyOffsetCache.TryGetValue(key, out long offset);
-            if (!hasOffset) return DatabaseEntry.Empty(key);
+            if (!hasOffset) return DatabaseEntry.Null(key);
 
             // If we have a key, locate entry from file and cache result for later
             var storedEntry = _storeRepository.GetValue(offset);
@@ -82,6 +82,25 @@ namespace ToyDb.Services
         }
 
         /// <summary>
+        /// Deletes values by appending tombstones to logs and clearing cache entries
+        /// Tombstones will be cleaned up during log compaction
+        /// </summary>
+        /// <param name="key">Key of value to be deleted</param>
+        public void DeleteValue(string key)
+        {
+            // Don't commit deletes to values which don't exist
+            if (!_keyOffsetCache.TryGetValue(key, out long _)) return;
+
+            var value = DatabaseEntry.Null(key);
+
+            _walRepository.Append(key, value);
+            _storeRepository.Append(key, value);
+
+            _keyOffsetCache.Remove(key);
+            _keyEntryCache.Remove(key);
+        }
+
+        /// <summary>
         /// Restores database index from data store
         /// </summary>
         private void RestoreIndexFromStore()
@@ -89,7 +108,7 @@ namespace ToyDb.Services
             var entries = _storeRepository.GetLatestEntries();
             
             var updatedIndex = entries.ToDictionary(x => x.Key, x => x.Value.Item2);
-            _keyOffsetCache.Reset(updatedIndex);
+            _keyOffsetCache.Replace(updatedIndex);
         }
     }
 }

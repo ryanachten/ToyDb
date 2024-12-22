@@ -31,4 +31,6 @@ public class KeyEntryCache : IKeyEntryCache
     }
 
     public void Set(string key, DatabaseEntry? value) => _cache.Set(key, value, _entryOptions);
+
+    public void Remove(string key) => _cache.Remove(key);
 }

@@ -19,11 +19,13 @@ public class KeyOffsetCache : IKeyOffsetCache
 
     public void Set(string key, long? value) => _cache.Set(key, value);
 
+    public void Remove(string key) => _cache.Remove(key);
+
     /// <summary>
-    /// Reset the cache to to a given state
+    /// Replace the cache with a new state
     /// </summary>
     /// <param name="entries">Entries to represent new cache state</param>
-    public void Reset(Dictionary<string, long> entries)
+    public void Replace(Dictionary<string, long> entries)
     {
         _cache.Clear();
 

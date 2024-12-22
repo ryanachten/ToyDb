@@ -7,11 +7,11 @@ public class DatabaseEntry
 {
     public required string Key { get; set; }
     public required DataType Type { get; set; }
-    public required ByteString Data { get; set; }
+    public required ByteString? Data { get; set; }
 
-    public static DatabaseEntry Empty(string key) => new () {
+    public static DatabaseEntry Null(string key) => new () {
         Key = key,
         Type = DataType.Null,
-        Data = ByteString.Empty
+        Data = null
     };
 }

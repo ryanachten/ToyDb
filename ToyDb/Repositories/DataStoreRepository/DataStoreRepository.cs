@@ -24,10 +24,9 @@ namespace ToyDb.Repositories.DataStoreRepository
         }
 
         /// <summary>
-        /// Checks file for data redundancies, including duplicate keys
-        /// TODO: support removing null values
+        /// Checks file for data redundancies, including duplicate keys and null values
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Whether there are data redundancies</returns>
         public bool HasRedundantData()
         {
             using FileStream fileStream = new(logLocation, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -39,7 +38,7 @@ namespace ToyDb.Repositories.DataStoreRepository
             {
                 var entry = ReadEntry(binaryReader);
                 
-                if (keys.Contains(entry.Key)) return true;
+                if (keys.Contains(entry.Key) || NullMarker.Equals(entry.Data)) return true;
 
                 keys.Add(entry.Key);
             }

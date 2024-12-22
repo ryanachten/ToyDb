@@ -30,6 +30,7 @@ service Data {
 	rpc GetValue (GetRequest) returns (KeyValueResponse);
 	rpc GetAllValues (GetAllValuesRequest) returns (GetAllValuesReresponse);
 	rpc SetValue (KeyValueRequest) returns (KeyValueResponse);
+	rpc DeleteValue (DeleteRequest) returns (DeleteResponse);
 }
 
 message GetRequest {
@@ -43,3 +44,9 @@ message GetAllValuesReresponse {
 	repeated KeyValueResponse values = 1;
 }
 
+message DeleteRequest {
+	string key = 1;
+}
+
+message DeleteResponse {
+}

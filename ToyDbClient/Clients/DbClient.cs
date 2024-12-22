@@ -26,6 +26,14 @@ internal class DbClient
         return DbSerializer.Deserialize<T>(response);
     }
 
+    public async Task DeleteValue(string key)
+    {
+        await _dataClient.DeleteValueAsync(new DeleteRequest()
+        {
+            Key = key
+        });
+    }
+
     public async Task<Dictionary<string, string>> PrintAllValues()
     {
         var response = await _dataClient.GetAllValuesAsync(new GetAllValuesRequest());

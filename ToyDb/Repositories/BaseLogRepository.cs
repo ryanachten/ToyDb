@@ -39,7 +39,7 @@ public abstract class BaseLogRepository
 
         binaryWriter.Write(key);
         binaryWriter.Write(entry.Type.ToString());
-        binaryWriter.Write(entry.Data.ToBase64());
+        binaryWriter.Write(entry.Data?.ToBase64() ?? NullMarker.ToBase64());
 
         return currentOffset;
     }
@@ -59,6 +59,8 @@ public abstract class BaseLogRepository
         {
             var offset = fileStream.Position;
             var entry = ReadEntry(binaryReader);
+
+            if (NullMarker.Equals(entry.Data)) continue;
 
             entries[entry.Key] = (entry, offset);
         }

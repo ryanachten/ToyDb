@@ -11,16 +11,20 @@ public class CommandService
         getDefaultValue: () => "https://localhost:7274"
     );
 
+    private readonly Argument<string> _keyArgument = new("key", "The key to retrieve");
+
     public Command CreateRootCommand()
     {
         var getCommand = CreateGetCommand();
         var setCommand = CreateSetCommand();
+        var deleteCommand = CreateDeleteCommand();
         var listCommand = CreateListCommand();
 
         var rootCommand = new RootCommand("Commandline client for ToyDb")
         {
             getCommand,
             setCommand,
+            deleteCommand,
             listCommand
         };
 
@@ -29,12 +33,27 @@ public class CommandService
         return rootCommand;
     }
 
+    private Command CreateDeleteCommand()
+    {
+        var deleteCommand = new Command("delete", "Delete the value of a key")
+        {
+            _keyArgument
+        };
+
+        deleteCommand.SetHandler(async (key, dbAddress) =>
+        {
+            var client = new DbClient(dbAddress);
+            await client.DeleteValue(key);
+        }, _keyArgument, _dbAddressOption);
+
+        return deleteCommand;
+    }
+
     private Command CreateGetCommand()
     {
-        var keyArgument = new Argument<string>("key", "The key to retrieve");
         var getCommand = new Command("get", "Retrieve the value of a key")
         {
-            keyArgument
+            _keyArgument
         };
 
         getCommand.SetHandler(async (key, dbAddress) =>
@@ -42,7 +61,7 @@ public class CommandService
             var client = new DbClient(dbAddress);
             var value = await client.GetValue<string>(key);
             Console.WriteLine(value);
-        }, keyArgument, _dbAddressOption);
+        }, _keyArgument, _dbAddressOption);
 
         return getCommand;
     }
