@@ -5,11 +5,7 @@ namespace ToyDbClient.Services;
 
 public class CommandService
 {
-    private readonly Option<string> _dbAddressOption = new(
-        "--address",
-        description: "Address the ToyDb instance is running on",
-        getDefaultValue: () => "https://localhost:7274"
-    );
+    private readonly DbPartitionClient _dbClient = new();
 
     private readonly Argument<string> _keyArgument = new("key", "The key to retrieve");
 
@@ -28,8 +24,6 @@ public class CommandService
             listCommand
         };
 
-        rootCommand.AddGlobalOption(_dbAddressOption);
-
         return rootCommand;
     }
 
@@ -40,11 +34,10 @@ public class CommandService
             _keyArgument
         };
 
-        deleteCommand.SetHandler(async (key, dbAddress) =>
+        deleteCommand.SetHandler(async (key) =>
         {
-            var client = new DbClient(dbAddress);
-            await client.DeleteValue(key);
-        }, _keyArgument, _dbAddressOption);
+            await _dbClient.DeleteValue(key);
+        }, _keyArgument);
 
         return deleteCommand;
     }
@@ -56,12 +49,11 @@ public class CommandService
             _keyArgument
         };
 
-        getCommand.SetHandler(async (key, dbAddress) =>
+        getCommand.SetHandler(async (key) =>
         {
-            var client = new DbClient(dbAddress);
-            var value = await client.GetValue<string>(key);
+            var value = await _dbClient.GetValue<string>(key);
             Console.WriteLine(value);
-        }, _keyArgument, _dbAddressOption);
+        }, _keyArgument);
 
         return getCommand;
     }
@@ -75,7 +67,7 @@ public class CommandService
             keyValuePairArgument
         };
 
-        setCommand.SetHandler(async (kvp, dbAddress) =>
+        setCommand.SetHandler(async (kvp) =>
         {
             var parts = kvp.Split('=', 2);
             if (parts.Length != 2)
@@ -87,10 +79,9 @@ public class CommandService
             var key = parts[0];
             var value = parts[1];
 
-            var client = new DbClient(dbAddress);
-            var updatedValue = await client.SetValue(key, value);
+            var updatedValue = await _dbClient.SetValue(key, value);
             Console.WriteLine(updatedValue);
-        }, keyValuePairArgument, _dbAddressOption);
+        }, keyValuePairArgument);
 
         return setCommand;
     }
@@ -99,15 +90,14 @@ public class CommandService
     {
         var listCommand = new Command("list", "List all key value pairs");
 
-        listCommand.SetHandler(async (dbAddress) =>
+        listCommand.SetHandler(async () =>
         {
-            var client = new DbClient(dbAddress);
-            var values = await client.PrintAllValues();
+            var values = await _dbClient.PrintAllValues();
             foreach (var value in values)
             {
                 Console.WriteLine($"{value.Key}: {value.Value}");
             }
-        }, _dbAddressOption);
+        });
 
         return listCommand;
     }

@@ -1,5 +1,4 @@
 ﻿using Google.Protobuf;
-using System.Text;
 
 namespace ToyDb.Models;
 

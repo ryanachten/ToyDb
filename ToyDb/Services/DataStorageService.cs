@@ -23,6 +23,8 @@ namespace ToyDb.Services
             _storeRepository = storeRepository;
             _walRepository = walRepository;
 
+            // TODO: now that this is a scoped service, we're going to call this multiple times which is not what we want
+            // FIXME: there is also a bug when restoring from file, I think it's to do with delete markers
             RestoreIndexFromStore();
         }
 

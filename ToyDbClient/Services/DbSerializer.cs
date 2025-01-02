@@ -1,11 +1,11 @@
 ﻿using Google.Protobuf;
 using ToyDb.Messages;
 
-namespace ToyDbClient.Clients;
+namespace ToyDbClient.Services;
 
 public static class DbSerializer
 {
-    private static readonly Dictionary<Type, DataType> _typeBindings = new ()
+    private static readonly Dictionary<Type, DataType> _typeBindings = new()
     {
         {typeof(bool), DataType.Bool},
         {typeof(int), DataType.Int},
@@ -24,12 +24,14 @@ public static class DbSerializer
     /// <returns>Serialized data object</returns>
     public static KeyValueRequest Serialize<T>(string key, T value)
     {
-        if (EqualityComparer<T>.Default.Equals(value, default)) { 
+        if (EqualityComparer<T>.Default.Equals(value, default))
+        {
             throw new ArgumentNullException(nameof(value));
         }
 
         if (typeof(T) == typeof(string))
-            return new KeyValueRequest() {
+            return new KeyValueRequest()
+            {
                 Key = key,
                 Type = DataType.String,
                 Value = ByteString.CopyFromUtf8((string)(object)value!)
@@ -94,9 +96,9 @@ public static class DbSerializer
             return (T)(object)null!;
 
         var hasBinding = _typeBindings.TryGetValue(typeof(T), out var requestedType);
-        if(!hasBinding)
+        if (!hasBinding)
             throw new NotSupportedException($"Deserialization of value with provided type {typeof(T)} is not supported. Value found with stored type {storedType}.");
-        
+
         if (validateStoredTypes && requestedType != storedType)
             throw new InvalidOperationException($"Requested type {requestedType} does not match stored type {storedType}");
 

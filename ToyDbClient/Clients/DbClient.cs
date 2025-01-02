@@ -1,9 +1,10 @@
 ﻿using Grpc.Net.Client;
 using ToyDb.Messages;
+using ToyDbClient.Services;
 
 namespace ToyDbClient.Clients;
 
-internal class DbClient
+internal class DbClient : IDbClient
 {
     private readonly Data.DataClient _dataClient;
 

@@ -1,5 +1,5 @@
 ﻿using ToyDb.Messages;
-using ToyDbClient.Clients;
+using ToyDbClient.Services;
 
 namespace ToyDbUnitTests.Client.Services.Serializer;
 

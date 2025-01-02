@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Options;
-using System.Linq;
 using ToyDb.Models;
 
 namespace ToyDb.Repositories.DataStoreRepository
