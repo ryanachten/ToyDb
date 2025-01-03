@@ -1,23 +1,8 @@
 ﻿namespace ToyDbClient.Clients;
 
-public class DbPartitionClient : IDbClient
+public class DbPartitionClient(List<string> partitionAddresses) : IDbClient
 {
-    // TODO: move into config
-    private readonly string[] _partitionAddresses = [
-        "https://localhost:8081",
-        "https://localhost:8083",
-        "https://localhost:8085"
-    ];
-
-    private readonly List<DbClient> _dbClients = [];
-
-    public DbPartitionClient()
-    {
-        foreach (var address in _partitionAddresses)
-        {
-            _dbClients.Add(new DbClient(address));
-        }
-    }
+    private readonly DbClient[] _dbClients = partitionAddresses.Select(address => new DbClient(address)).ToArray();
 
     public Task DeleteValue(string key)
     {
@@ -61,6 +46,6 @@ public class DbPartitionClient : IDbClient
     private int GetPartitionIndex(string key)
     {
         var hash = key.GetHashCode();
-        return Math.Abs(hash % _dbClients.Count);
+        return Math.Abs(hash % _dbClients.Length);
     }
 }

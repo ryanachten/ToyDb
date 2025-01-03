@@ -1,11 +1,15 @@
 ﻿using System.CommandLine;
 using ToyDbClient.Clients;
+using ToyDbClient.Models;
 
 namespace ToyDbClient.Services;
 
 public class CommandService
 {
-    private readonly DbPartitionClient _dbClient = new();
+    private readonly Option<string> _configOption = new(
+        "config",
+        description: "Path to ToyDb configuration",
+        getDefaultValue: () => "C:\\dev\\ToyDb\\ToyDbClient\\toydb.json");
 
     private readonly Argument<string> _keyArgument = new("key", "The key to retrieve");
 
@@ -31,13 +35,15 @@ public class CommandService
     {
         var deleteCommand = new Command("delete", "Delete the value of a key")
         {
-            _keyArgument
+            _keyArgument,
+            _configOption
         };
 
-        deleteCommand.SetHandler(async (key) =>
+        deleteCommand.SetHandler(async (key, configPath) =>
         {
-            await _dbClient.DeleteValue(key);
-        }, _keyArgument);
+            var client = CreateDbClient(configPath);
+            await client.DeleteValue(key);
+        }, _keyArgument, _configOption);
 
         return deleteCommand;
     }
@@ -46,14 +52,16 @@ public class CommandService
     {
         var getCommand = new Command("get", "Retrieve the value of a key")
         {
-            _keyArgument
+            _keyArgument,
+            _configOption,
         };
 
-        getCommand.SetHandler(async (key) =>
+        getCommand.SetHandler(async (key, configPath) =>
         {
-            var value = await _dbClient.GetValue<string>(key);
+            var client = CreateDbClient(configPath);
+            var value = await client.GetValue<string>(key);
             Console.WriteLine(value);
-        }, _keyArgument);
+        }, _keyArgument, _configOption);
 
         return getCommand;
     }
@@ -64,10 +72,11 @@ public class CommandService
         var keyValuePairArgument = new Argument<string>("keyValue", "The key-value pair in the format key=value");
         var setCommand = new Command("set", "Set a key-value pair")
         {
-            keyValuePairArgument
+            keyValuePairArgument,
+            _configOption
         };
 
-        setCommand.SetHandler(async (kvp) =>
+        setCommand.SetHandler(async (kvp, configPath) =>
         {
             var parts = kvp.Split('=', 2);
             if (parts.Length != 2)
@@ -79,26 +88,40 @@ public class CommandService
             var key = parts[0];
             var value = parts[1];
 
-            var updatedValue = await _dbClient.SetValue(key, value);
+            var client = CreateDbClient(configPath);
+            var updatedValue = await client.SetValue(key, value);
             Console.WriteLine(updatedValue);
-        }, keyValuePairArgument);
+        }, keyValuePairArgument, _configOption);
 
         return setCommand;
     }
 
     private Command CreateListCommand()
     {
-        var listCommand = new Command("list", "List all key value pairs");
-
-        listCommand.SetHandler(async () =>
+        var listCommand = new Command("list", "List all key value pairs")
         {
-            var values = await _dbClient.PrintAllValues();
+            _configOption
+        };
+
+        listCommand.SetHandler(async (configPath) =>
+        {
+            var client = CreateDbClient(configPath);
+            var values = await client.PrintAllValues();
             foreach (var value in values)
             {
                 Console.WriteLine($"{value.Key}: {value.Value}");
             }
-        });
+        }, _configOption);
 
         return listCommand;
+    }
+
+    private static DbPartitionClient CreateDbClient(string configPath)
+    {
+        var config = Configuration.Load(configPath);
+        
+        if (config == null) throw new CommandLineConfigurationException($"Configuration at {configPath} not found");
+
+        return new DbPartitionClient(config.Partitions);
     }
 }
