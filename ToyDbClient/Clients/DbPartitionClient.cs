@@ -6,13 +6,13 @@ public class DbPartitionClient(List<string> partitionAddresses) : IDbClient
 
     public Task DeleteValue(string key)
     {
-        var client = _dbClients[GetPartitionIndex(key)];
+        var client = GetPartitionClient(key);
         return client.DeleteValue(key);
     }
 
     public Task<T> GetValue<T>(string key)
     {
-        var client = _dbClients[GetPartitionIndex(key)];
+        var client = GetPartitionClient(key);
         return client.GetValue<T>(key);
     }
 
@@ -36,16 +36,18 @@ public class DbPartitionClient(List<string> partitionAddresses) : IDbClient
 
     public Task<T> SetValue<T>(string key, T value)
     {
-        var client = _dbClients[GetPartitionIndex(key)];
+        var client = GetPartitionClient(key);
         return client.SetValue(key, value);
     }
 
     /// <summary>
-    /// Returns partition index based on hash of key
+    /// Returns client for database partition based on hash of key
     /// </summary>
-    private int GetPartitionIndex(string key)
+    private DbClient GetPartitionClient(string key)
     {
         var hash = key.GetHashCode();
-        return Math.Abs(hash % _dbClients.Length);
+        var index = Math.Abs(hash % _dbClients.Length);
+        
+        return _dbClients[index];
     }
 }

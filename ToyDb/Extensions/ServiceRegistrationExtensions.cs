@@ -29,7 +29,7 @@ public static class ServiceRegistrationExtensions
 
     private static void RegisterServices(this WebApplicationBuilder builder)
     {
-        builder.Services.AddScoped<IDataStorageService, DataStorageService>();
+        builder.Services.AddSingleton<IDataStorageService, DataStorageService>();
 
         builder.Services.Configure<LogCompactionOptions>(
             builder.Configuration.GetSection(LogCompactionOptions.Key));
@@ -42,11 +42,11 @@ public static class ServiceRegistrationExtensions
         builder.Services.Configure<DataStoreOptions>(
             builder.Configuration.GetSection(DataStoreOptions.Key));
 
-        builder.Services.AddScoped<IDataStoreRepository, DataStoreRepository>();
+        builder.Services.AddSingleton<IDataStoreRepository, DataStoreRepository>();
 
         builder.Services.Configure<WriteAheadLogOptions>(
             builder.Configuration.GetSection(WriteAheadLogOptions.Key));
 
-        builder.Services.AddScoped<IWriteAheadLogRepository, WriteAheadLogRepository>();
+        builder.Services.AddSingleton<IWriteAheadLogRepository, WriteAheadLogRepository>();
     }
 }

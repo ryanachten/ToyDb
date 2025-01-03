@@ -9,7 +9,7 @@ public class CommandService
     private readonly Option<string> _configOption = new(
         "config",
         description: "Path to ToyDb configuration",
-        getDefaultValue: () => "C:\\dev\\ToyDb\\ToyDbClient\\toydb.json");
+        getDefaultValue: () => "C:\\dev\\ToyDb\\ToyDbClient\\toydb.json"); // TODO: make this a relative path or something
 
     private readonly Argument<string> _keyArgument = new("key", "The key to retrieve");
 
