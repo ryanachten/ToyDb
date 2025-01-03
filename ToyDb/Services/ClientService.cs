@@ -37,28 +37,26 @@ public class ClientService(IDataStorageService dataStorageService) : Data.DataBa
         return Task.FromResult(response);
     }
 
-    public override Task<KeyValueResponse> SetValue(KeyValueRequest request, ServerCallContext context)
+    public override async Task<KeyValueResponse> SetValue(KeyValueRequest request, ServerCallContext context)
     {
-        var result = dataStorageService.SetValue(request.Key, new DatabaseEntry() {
+        await dataStorageService.SetValue(request.Key, new DatabaseEntry() {
             Key = request.Key,
             Type = request.Type,
             Data = request.Value
         });
 
-        var response = new KeyValueResponse()
+        return new KeyValueResponse()
         {
             Key = request.Key,
-            Type = result.Type,
-            Value = result.Data
+            Type = request.Type,
+            Value = request.Value
         };
-
-        return Task.FromResult(response);
     }
 
-    public override Task<DeleteResponse> DeleteValue(DeleteRequest request, ServerCallContext context)
+    public override async Task<DeleteResponse> DeleteValue(DeleteRequest request, ServerCallContext context)
     {
-        dataStorageService.DeleteValue(request.Key);
+        await dataStorageService.DeleteValue(request.Key);
 
-        return Task.FromResult(new DeleteResponse());
+        return new DeleteResponse();
     }
 }
