@@ -1,6 +1,6 @@
 ﻿namespace ToyDb.Services.LogCompaction;
 
-public class LogCompactionProcess(IDataStorageService dataStorageService) : BackgroundService
+public class LogCompactionProcess(IWriteStorageService dataStorageService) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

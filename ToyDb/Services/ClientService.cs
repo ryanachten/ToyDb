@@ -7,11 +7,14 @@ namespace ToyDb.Services;
 /// <summary>
 /// Communicates with GRPC client
 /// </summary>
-public class ClientService(IDataStorageService dataStorageService) : Data.DataBase
+public class ClientService(
+    IReadStorageService readStorageService,
+    IWriteStorageService writeStorageService
+) : Data.DataBase
 {
     public override Task<KeyValueResponse> GetValue(GetRequest request, ServerCallContext context)
     {
-        var value = dataStorageService.GetValue(request.Key);
+        var value = readStorageService.GetValue(request.Key);
         var response = new KeyValueResponse()
         {
             Key = request.Key,
@@ -23,7 +26,7 @@ public class ClientService(IDataStorageService dataStorageService) : Data.DataBa
 
     public override Task<GetAllValuesReresponse> GetAllValues(GetAllValuesRequest request, ServerCallContext context)
     {
-        var values = dataStorageService.GetValues();
+        var values = readStorageService.GetValues();
         var keyValuePairs = values.Select(x => new KeyValueResponse()
         {
             Key = x.Key,
@@ -39,7 +42,7 @@ public class ClientService(IDataStorageService dataStorageService) : Data.DataBa
 
     public override async Task<KeyValueResponse> SetValue(KeyValueRequest request, ServerCallContext context)
     {
-        await dataStorageService.SetValue(request.Key, new DatabaseEntry() {
+        await writeStorageService.SetValue(request.Key, new DatabaseEntry() {
             Key = request.Key,
             Type = request.Type,
             Data = request.Value
@@ -55,7 +58,7 @@ public class ClientService(IDataStorageService dataStorageService) : Data.DataBa
 
     public override async Task<DeleteResponse> DeleteValue(DeleteRequest request, ServerCallContext context)
     {
-        await dataStorageService.DeleteValue(request.Key);
+        await writeStorageService.DeleteValue(request.Key);
 
         return new DeleteResponse();
     }

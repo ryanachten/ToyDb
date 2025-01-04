@@ -6,13 +6,13 @@ using ToyDb.Repositories.WriteAheadLogRepository;
 
 namespace ToyDb.Services
 {
-    public sealed class DataStorageService : IDataStorageService, IDisposable
+    public sealed class WriteStorageService : IWriteStorageService, IDisposable
     {
         private readonly IKeyOffsetCache _keyOffsetCache;
         private readonly IKeyEntryCache _keyEntryCache;
         private readonly IDataStoreRepository _storeRepository;
         private readonly IWriteAheadLogRepository _walRepository;
-        private readonly ILogger<DataStorageService> _logger;
+        private readonly ILogger<WriteStorageService> _logger;
 
         /// <summary>
         /// Writes are queued to prevent lock contention and avoid out of order operations
@@ -21,12 +21,12 @@ namespace ToyDb.Services
         private readonly SemaphoreSlim _writeSemaphore = new(0);
         private readonly CancellationTokenSource _writeCancellationToken = new();
 
-        public DataStorageService(
+        public WriteStorageService(
             IKeyOffsetCache keyOffsetCache,
             IKeyEntryCache keyEntryCache,
             IDataStoreRepository storeRepository,
             IWriteAheadLogRepository walRepository,
-            ILogger<DataStorageService> logger)
+            ILogger<WriteStorageService> logger)
         {
             _keyOffsetCache = keyOffsetCache;
             _keyEntryCache = keyEntryCache;
@@ -34,33 +34,7 @@ namespace ToyDb.Services
             _walRepository = walRepository;
             _logger = logger;
 
-            // FIXME: there is also a bug when restoring from file, I think it's to do with delete markers
-            RestoreIndexFromStore();
             Task.Run(() => PollWriteQueue());
-        }
-
-        public DatabaseEntry GetValue(string key)
-        {
-            // First attempt to entry result in cache
-            var hasEntry = _keyEntryCache.TryGetValue(key, out var cachedEntry);
-            if (hasEntry && cachedEntry != null) return cachedEntry;
-            if (hasEntry && cachedEntry == null) return DatabaseEntry.Null(key);
-
-            // Then attempt to locate key in cache (if absent, we probably don't have a result)
-            var hasOffset = _keyOffsetCache.TryGetValue(key, out long offset);
-            if (!hasOffset) return DatabaseEntry.Null(key);
-
-            // If we have a key, locate entry from file and cache result for later
-            var storedEntry = _storeRepository.GetValue(offset);
-            _keyEntryCache.Set(key, storedEntry);
-
-            return storedEntry;
-        }
-
-        public Dictionary<string, DatabaseEntry> GetValues()
-        {
-            var entries = _storeRepository.GetLatestEntries();
-            return entries.ToDictionary((x) => x.Key, (x) => x.Value.Item1);
         }
 
         /// <summary>
@@ -113,17 +87,6 @@ namespace ToyDb.Services
             _storeRepository.CreateNewLogFile();
 
             var updatedIndex = _storeRepository.AppendRange(entities);
-            _keyOffsetCache.Replace(updatedIndex);
-        }
-
-        /// <summary>
-        /// Restores database index from data store
-        /// </summary>
-        private void RestoreIndexFromStore()
-        {
-            var entries = _storeRepository.GetLatestEntries();
-            
-            var updatedIndex = entries.ToDictionary(x => x.Key, x => x.Value.Item2);
             _keyOffsetCache.Replace(updatedIndex);
         }
 

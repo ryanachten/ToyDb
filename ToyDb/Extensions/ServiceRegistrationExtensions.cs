@@ -29,7 +29,9 @@ public static class ServiceRegistrationExtensions
 
     private static void RegisterServices(this WebApplicationBuilder builder)
     {
-        builder.Services.AddSingleton<IDataStorageService, DataStorageService>();
+        builder.Services.AddSingleton<IReadStorageService, ReadStorageService>();
+
+        builder.Services.AddSingleton<IWriteStorageService, WriteStorageService>();
 
         builder.Services.Configure<LogCompactionOptions>(
             builder.Configuration.GetSection(LogCompactionOptions.Key));
