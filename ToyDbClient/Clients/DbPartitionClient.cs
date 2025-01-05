@@ -1,6 +1,8 @@
-﻿namespace ToyDbClient.Clients;
+﻿using Microsoft.Extensions.Logging;
 
-public class DbPartitionClient(List<string> partitionAddresses) : IDbClient
+namespace ToyDbClient.Clients;
+
+public class DbPartitionClient(ILogger<DbPartitionClient> logger, List<string> partitionAddresses) : IDbClient
 {
     private readonly DbClient[] _dbClients = partitionAddresses.Select(address => new DbClient(address)).ToArray();
 
@@ -47,7 +49,9 @@ public class DbPartitionClient(List<string> partitionAddresses) : IDbClient
     {
         var hash = key.GetHashCode();
         var index = Math.Abs(hash % _dbClients.Length);
-        
+
+        logger.LogInformation("Selected partition: {Partition} for key: {Key}", index, key);
+
         return _dbClients[index];
     }
 }

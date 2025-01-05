@@ -10,12 +10,13 @@ namespace ToyDb.Repositories;
 public abstract class BaseLogRepository
 {
     protected string logLocation;
-
+    private readonly ILogger _logger;
     private readonly string _parentFolder;
     private string _logDirectory;
 
-    protected BaseLogRepository(string logLocation)
+    protected BaseLogRepository(ILogger logger, string logLocation)
     {
+        _logger = logger;
         _parentFolder = logLocation;
 
         GetLatestLogFilePath();
@@ -76,7 +77,9 @@ public abstract class BaseLogRepository
         Directory.CreateDirectory(_logDirectory);
         using FileStream fs = File.Create(filePath);
 
-        this.logLocation = filePath;
+        logLocation = filePath;
+
+        _logger.LogInformation("Created new log file at: {Location}", filePath);
     }
 
     protected static DatabaseEntry ReadEntry(BinaryReader binaryReader)
@@ -94,8 +97,10 @@ public abstract class BaseLogRepository
 
     private void GetLatestLogFilePath()
     {
+        var applicationName = Environment.GetEnvironmentVariable("PARTITION_NAME") ?? string.Empty;
         var currentDirectory = Directory.GetCurrentDirectory();
-        _logDirectory = Path.Combine(currentDirectory, _parentFolder);
+
+        _logDirectory = Path.Combine(currentDirectory, _parentFolder, applicationName);
 
         if (!Directory.Exists(_logDirectory))
         {
@@ -110,6 +115,8 @@ public abstract class BaseLogRepository
             return;
         }
 
-        this.logLocation = latestFilePath;
+        logLocation = latestFilePath;
+        
+        _logger.LogInformation("Latest log file located at: {Location}", latestFilePath);
     }
 }

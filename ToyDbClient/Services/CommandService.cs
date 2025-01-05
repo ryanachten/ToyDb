@@ -1,4 +1,5 @@
-﻿using System.CommandLine;
+﻿using Microsoft.Extensions.Logging;
+using System.CommandLine;
 using ToyDbClient.Clients;
 using ToyDbClient.Models;
 
@@ -122,6 +123,9 @@ public class CommandService
         
         if (config == null) throw new CommandLineConfigurationException($"Configuration at {configPath} not found");
 
-        return new DbPartitionClient(config.Partitions);
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        var logger = loggerFactory.CreateLogger<DbPartitionClient>();
+
+        return new DbPartitionClient(logger, config.Partitions);
     }
 }

@@ -3,7 +3,9 @@ using ToyDb.Models;
 
 namespace ToyDb.Repositories.DataStoreRepository
 {
-    public class DataStoreRepository(IOptions<DataStoreOptions> options) : BaseLogRepository(options.Value.Location), IDataStoreRepository
+    public class DataStoreRepository(
+        IOptions<DataStoreOptions> options, ILogger<DataStoreRepository> logger
+    ) : BaseLogRepository(logger, options.Value.Location), IDataStoreRepository
     {
         /// <summary>
         /// Reads a database entry from a given offset

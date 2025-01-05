@@ -1,4 +1,6 @@
-﻿using ToyDb.Caches;
+﻿using Microsoft.Extensions.Logging;
+using ToyDb.Caches;
+using ToyDb.Extensions;
 using ToyDb.Models;
 using ToyDb.Repositories.DataStoreRepository;
 
@@ -55,9 +57,13 @@ public class ReadStorageService : IReadStorageService
     /// </summary>
     private void RestoreIndexFromStore()
     {
+        var timer = _logger.StartTimedLog(nameof(RestoreIndexFromStore));
+
         var entries = _storeRepository.GetLatestEntries();
 
         var updatedIndex = entries.ToDictionary(x => x.Key, x => x.Value.Item2);
         _keyOffsetCache.Replace(updatedIndex);
+
+        timer.Stop();
     }
 }
