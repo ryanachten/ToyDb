@@ -1,4 +1,5 @@
 ﻿using Grpc.Core;
+using ToyDb.Extensions;
 using ToyDb.Messages;
 using ToyDb.Models;
 
@@ -9,11 +10,14 @@ namespace ToyDb.Services;
 /// </summary>
 public class ClientService(
     IReadStorageService readStorageService,
-    IWriteStorageService writeStorageService
+    IWriteStorageService writeStorageService,
+    ILogger<ClientService> logger
 ) : Data.DataBase
 {
     public override Task<KeyValueResponse> GetValue(GetRequest request, ServerCallContext context)
     {
+        var timer = logger.StartTimedLog(nameof(GetValue), request.Key);
+
         var value = readStorageService.GetValue(request.Key);
         var response = new KeyValueResponse()
         {
@@ -21,11 +25,16 @@ public class ClientService(
             Type = value.Type,
             Value = value.Data
         };
+
+        timer.Stop();
+
         return Task.FromResult(response);
     }
 
     public override Task<GetAllValuesReresponse> GetAllValues(GetAllValuesRequest request, ServerCallContext context)
     {
+        var timer = logger.StartTimedLog(nameof(GetAllValues));
+        
         var values = readStorageService.GetValues();
         var keyValuePairs = values.Select(x => new KeyValueResponse()
         {
@@ -37,16 +46,22 @@ public class ClientService(
         var response = new GetAllValuesReresponse();
         response.Values.AddRange(keyValuePairs);
 
+        timer.Stop();
+
         return Task.FromResult(response);
     }
 
     public override async Task<KeyValueResponse> SetValue(KeyValueRequest request, ServerCallContext context)
     {
+        var timer = logger.StartTimedLog(nameof(SetValue), request.Key);
+
         await writeStorageService.SetValue(request.Key, new DatabaseEntry() {
             Key = request.Key,
             Type = request.Type,
             Data = request.Value
         });
+
+        timer.Stop();
 
         return new KeyValueResponse()
         {
@@ -58,7 +73,11 @@ public class ClientService(
 
     public override async Task<DeleteResponse> DeleteValue(DeleteRequest request, ServerCallContext context)
     {
+        var timer = logger.StartTimedLog(nameof(DeleteValue), request.Key);
+
         await writeStorageService.DeleteValue(request.Key);
+
+        timer.Stop();
 
         return new DeleteResponse();
     }
