@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.IO.Hashing;
+using System.Text;
 
 namespace ToyDbClient.Clients;
 
@@ -47,8 +49,12 @@ public class DbPartitionClient(ILogger<DbPartitionClient> logger, List<string> p
     /// </summary>
     private DbClient GetPartitionClient(string key)
     {
-        var hash = key.GetHashCode();
-        var index = Math.Abs(hash % _dbClients.Length);
+        // Compute hash based on key value
+        // We use xxHash here because it's a faster hashing solution than a cryptographic algorithm like SHA256
+        var computedHash = XxHash32.Hash(Encoding.UTF8.GetBytes(key));
+
+        // Convert hash to int and modulo to get consistent partition index
+        var index = Math.Abs(BitConverter.ToInt32(computedHash) % _dbClients.Length);
 
         logger.LogInformation("Selected partition: {Partition} for key: {Key}", index, key);
 

@@ -61,7 +61,11 @@ public abstract class BaseLogRepository
             var offset = fileStream.Position;
             var entry = ReadEntry(binaryReader);
 
-            if (NullMarker.Equals(entry.Data)) continue;
+            if (NullMarker.Equals(entry.Data))
+            {
+                entries.Remove(entry.Key);
+                continue;
+            }
 
             entries[entry.Key] = (entry, offset);
         }

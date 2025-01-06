@@ -24,7 +24,6 @@ public class ReadStorageService : IReadStorageService
         _storeRepository = storeRepository;
         _logger = logger;
 
-        // FIXME: there is also a bug when restoring from file, I think it's to do with delete markers
         RestoreIndexFromStore();
     }
 
