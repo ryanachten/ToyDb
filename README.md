@@ -18,8 +18,9 @@ The current capabilities we aim to explore are:
 
 - Data storage and retrieval
 - Data encoding
-- Replication
 - Partitioning
+- Replication
+- Transactions
 - Distributed hosting
 
 ## Usage
@@ -36,3 +37,21 @@ The current capabilities we aim to explore are:
 - Run the client via:
   - Get value: `dotnet run --project .\ToyDbClient\ToyDbClient.csproj -- get Hello`
   - Set value: `dotnet run --project .\ToyDbClient\ToyDbClient.csproj -- set Hello=World`
+
+## Design decisions
+
+### Protocol
+
+- ToyDb uses Google Remote Procedure Calls (gRPC) to communicate between clients and the database with messages defined using Protobufs. This allows for efficient communication, however, this could be problematic if we need to support .NET AoT in the future (not sure there's AoT gRPC support).
+
+### Encoding
+
+- ToyDb uses binary encoding of data to when saving to disk for efficient writes and reads. Values are currently Base64 encoded for no specific reason. This it might be something we want to remove in the future.
+
+### Storage
+
+- When writing to disk, ToyDb stores keys and their values to two places; a Write-Ahead Log, used for auditing and potentially in the future data recovery if needed, as well as an active Append-only Log (AoL). The active log is used for reads and goes through a compaction process to remove data redundancies at regular intervals to ensure reads remain efficient. The compaction process will produce a new AoL which in turn will be used for subsequent writes.
+
+### Partitioning
+
+- ToyDb computes a hash based on value keys and uses the modulo of these keys to assign to one of the available partitions. This helps ensure that values are uniformly distributed across partitions to prevent partition hot spots. However, it also means that user values are not adjacent, which could prove problematic if we need to support transactions and range queries in the future.
