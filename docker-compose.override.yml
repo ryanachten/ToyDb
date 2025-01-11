@@ -1,43 +1,57 @@
 services:
-  toydb-1:
+  toydb-p1-r1:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ASPNETCORE_HTTPS_PORTS=8081
       - ASPNETCORE_Kestrel__Certificates__Default__Password=password
       - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
-      - PARTITION_NAME=ToyDb-P1
+      - NODE_NAME=ToyDb-P1-R1
     ports:
       - "8080:8080"
       - "8081:8081"
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
       - ~/.aspnet/https:/https:ro
-  toydb-2:
+  toydb-p1-r2:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ASPNETCORE_HTTPS_PORTS=8081
       - ASPNETCORE_Kestrel__Certificates__Default__Password=password
       - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
-      - PARTITION_NAME=ToyDb-P2
+      - NODE_NAME=ToyDb-P1-R2
     ports:
       - "8082:8080"
       - "8083:8081"
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
       - ~/.aspnet/https:/https:ro
-  toydb-3:
+  toydb-p2-r1:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ASPNETCORE_HTTPS_PORTS=8081
       - ASPNETCORE_Kestrel__Certificates__Default__Password=password
       - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
-      - PARTITION_NAME=ToyDb-P3
+      - NODE_NAME=ToyDb-P2-R1
     ports:
       - "8084:8080"
       - "8085:8081"
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
+      - ~/.aspnet/https:/https:ro
+  toydb-p2-r2:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTPS_PORTS=8081
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+      - NODE_NAME=ToyDb-P2-R1
+    ports:
+      - "8086:8080"
+      - "8087:8081"
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
       - ~/.aspnet/https:/https:ro

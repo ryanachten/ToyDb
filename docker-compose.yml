@@ -1,15 +1,24 @@
 services:
-  toydb-1:
+  toydb-p1-r1:
+    container_name: toydb-p1-r1
     image: ${DOCKER_REGISTRY-}toydb
     build:
       context: .
       dockerfile: ToyDb/Dockerfile
-  toydb-2:
+  toydb-p1-r2:
+    container_name: toydb-p1-r2
     image: ${DOCKER_REGISTRY-}toydb
     build:
       context: .
       dockerfile: ToyDb/Dockerfile
-  toydb-3:
+  toydb-p2-r1:
+    container_name: toydb-p2-r1
+    image: ${DOCKER_REGISTRY-}toydb
+    build:
+      context: .
+      dockerfile: ToyDb/Dockerfile
+  toydb-p2-r2:
+    container_name: toydb-p2-r2
     image: ${DOCKER_REGISTRY-}toydb
     build:
       context: .

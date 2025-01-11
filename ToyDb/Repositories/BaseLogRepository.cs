@@ -40,6 +40,7 @@ public abstract class BaseLogRepository
 
         binaryWriter.Write(key);
         binaryWriter.Write(entry.Type.ToString());
+        // TODO: remove Base64 encoding
         binaryWriter.Write(entry.Data?.ToBase64() ?? NullMarker.ToBase64());
 
         return currentOffset;
@@ -101,10 +102,10 @@ public abstract class BaseLogRepository
 
     private void GetLatestLogFilePath()
     {
-        var applicationName = Environment.GetEnvironmentVariable("PARTITION_NAME") ?? string.Empty;
+        var nodeName = Environment.GetEnvironmentVariable("NODE_NAME") ?? string.Empty;
         var currentDirectory = Directory.GetCurrentDirectory();
 
-        _logDirectory = Path.Combine(currentDirectory, _parentFolder, applicationName);
+        _logDirectory = Path.Combine(currentDirectory, _parentFolder, nodeName);
 
         if (!Directory.Exists(_logDirectory))
         {

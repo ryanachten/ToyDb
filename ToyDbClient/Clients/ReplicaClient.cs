@@ -4,11 +4,11 @@ using ToyDbClient.Services;
 
 namespace ToyDbClient.Clients;
 
-internal class DbClient : IDbClient
+public class ReplicaClient : IDbClient
 {
     private readonly Data.DataClient _dataClient;
 
-    public DbClient(string dbAddress)
+    public ReplicaClient(string dbAddress)
     {
         var channel = GrpcChannel.ForAddress(dbAddress);
         _dataClient = new Data.DataClient(channel);
@@ -35,7 +35,7 @@ internal class DbClient : IDbClient
         });
     }
 
-    public async Task<Dictionary<string, string>> PrintAllValues()
+    public async Task<Dictionary<string, string>> GetAllValues()
     {
         var response = await _dataClient.GetAllValuesAsync(new GetAllValuesRequest());
         return response.Values.ToDictionary((kvp) => kvp.Key, (kvp) => kvp.Value.ToStringUtf8());

@@ -107,7 +107,7 @@ public class CommandService
         listCommand.SetHandler(async (configPath) =>
         {
             var client = CreateDbClient(configPath);
-            var values = await client.PrintAllValues();
+            var values = await client.GetAllValues();
             foreach (var value in values)
             {
                 Console.WriteLine($"{value.Key}: {value.Value}");
@@ -117,15 +117,15 @@ public class CommandService
         return listCommand;
     }
 
-    private static DbPartitionClient CreateDbClient(string configPath)
+    private static PartitionClient CreateDbClient(string configPath)
     {
         var config = Configuration.Load(configPath);
         
         if (config == null) throw new CommandLineConfigurationException($"Configuration at {configPath} not found");
 
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-        var logger = loggerFactory.CreateLogger<DbPartitionClient>();
+        var logger = loggerFactory.CreateLogger<PartitionClient>();
 
-        return new DbPartitionClient(logger, config.Partitions);
+        return new PartitionClient(logger, config.Partitions, config.CompletedSecondaryWritesThreshold);
     }
 }

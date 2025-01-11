@@ -1,3 +1,16 @@
 ﻿{
-  "partitions": [ "https://localhost:8081", "https://localhost:8083", "https://localhost:8085" ]
+  "partitions": [
+    {
+      "primaryReplicaAddress": "https://localhost:8081",
+      "secondaryReplicaAddresses": [
+        "https://localhost:8083"
+      ]
+    },
+    {
+      "primaryReplicaAddress": "https://localhost:8085",
+      "secondaryReplicaAddresses": [
+        "https://localhost:8087"
+      ]
+    }
+  ]
 }
