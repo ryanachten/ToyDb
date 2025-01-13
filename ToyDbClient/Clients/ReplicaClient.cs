@@ -1,10 +1,11 @@
-﻿using Grpc.Net.Client;
+﻿using Google.Protobuf.WellKnownTypes;
+using Grpc.Net.Client;
 using ToyDb.Messages;
 using ToyDbClient.Services;
 
 namespace ToyDbClient.Clients;
 
-public class ReplicaClient : IDbClient
+public class ReplicaClient
 {
     private readonly Data.DataClient _dataClient;
 
@@ -20,17 +21,18 @@ public class ReplicaClient : IDbClient
         return DbSerializer.Deserialize<T>(response);
     }
 
-    public async Task<T> SetValue<T>(string key, T value)
+    public async Task<T> SetValue<T>(DateTime timestamp, string key, T value)
     {
-        var keyValuePair = DbSerializer.Serialize(key, value);
+        var keyValuePair = DbSerializer.Serialize(timestamp, key, value);
         var response = await _dataClient.SetValueAsync(keyValuePair);
         return DbSerializer.Deserialize<T>(response);
     }
 
-    public async Task DeleteValue(string key)
+    public async Task DeleteValue(DateTime timestamp, string key)
     {
         await _dataClient.DeleteValueAsync(new DeleteRequest()
         {
+            Timestamp = Timestamp.FromDateTime(timestamp),
             Key = key
         });
     }

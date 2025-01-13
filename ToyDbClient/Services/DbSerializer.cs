@@ -1,5 +1,6 @@
 ﻿using Google.Protobuf;
 using ToyDb.Messages;
+using Timestamp = Google.Protobuf.WellKnownTypes.Timestamp;
 
 namespace ToyDbClient.Services;
 
@@ -19,10 +20,11 @@ public static class DbSerializer
     /// Serializes data into key-value pair format accepted by the database
     /// </summary>
     /// <typeparam name="T">Type of the requested data</typeparam>
+    /// <param name="timestamp">Timestamp update occurred</param>
     /// <param name="key">Key for value retrieval</param>
     /// <param name="value">Value to be encoded into binary format</param>
     /// <returns>Serialized data object</returns>
-    public static KeyValueRequest Serialize<T>(string key, T value)
+    public static KeyValueRequest Serialize<T>(DateTime timestamp, string key, T value)
     {
         if (EqualityComparer<T>.Default.Equals(value, default))
         {
@@ -30,52 +32,22 @@ public static class DbSerializer
         }
 
         if (typeof(T) == typeof(string))
-            return new KeyValueRequest()
-            {
-                Key = key,
-                Type = DataType.String,
-                Value = ByteString.CopyFromUtf8((string)(object)value!)
-            };
+            return CreateRequest(timestamp, key, DataType.String, ByteString.CopyFromUtf8((string)(object)value!));
 
         if (typeof(T) == typeof(bool))
-            return new KeyValueRequest()
-            {
-                Key = key,
-                Type = DataType.Bool,
-                Value = ByteString.CopyFrom(BitConverter.GetBytes((bool)(object)value!))
-            };
+            return CreateRequest(timestamp, key, DataType.Bool, BitConverter.GetBytes((bool)(object)value!));
 
         if (typeof(T) == typeof(int))
-            return new KeyValueRequest()
-            {
-                Key = key,
-                Type = DataType.Int,
-                Value = ByteString.CopyFrom(BitConverter.GetBytes((int)(object)value!))
-            };
+            return CreateRequest(timestamp, key, DataType.Int, BitConverter.GetBytes((int)(object)value!));
 
         if (typeof(T) == typeof(long))
-            return new KeyValueRequest()
-            {
-                Key = key,
-                Type = DataType.Long,
-                Value = ByteString.CopyFrom(BitConverter.GetBytes((long)(object)value!))
-            };
+            return CreateRequest(timestamp, key, DataType.Long, BitConverter.GetBytes((long)(object)value!));
 
         if (typeof(T) == typeof(float))
-            return new KeyValueRequest()
-            {
-                Key = key,
-                Type = DataType.Float,
-                Value = ByteString.CopyFrom(BitConverter.GetBytes((float)(object)value!))
-            };
+            return CreateRequest(timestamp, key, DataType.Float, BitConverter.GetBytes((float)(object)value!));
 
         if (typeof(T) == typeof(double))
-            return new KeyValueRequest()
-            {
-                Key = key,
-                Type = DataType.Double,
-                Value = ByteString.CopyFrom(BitConverter.GetBytes((double)(object)value!))
-            };
+            return CreateRequest(timestamp, key, DataType.Double, BitConverter.GetBytes((double)(object)value!));
 
         throw new NotSupportedException($"Serialization of value with provided type {typeof(T)} is not supported.");
     }
@@ -116,4 +88,15 @@ public static class DbSerializer
             _ => (T)(object)null!
         };
     }
+
+    private static KeyValueRequest CreateRequest(DateTime timestamp, string key, DataType type, byte[] value)
+        => CreateRequest(timestamp, key, type, ByteString.CopyFrom(value));
+
+    private static KeyValueRequest CreateRequest(DateTime timestamp, string key, DataType type, ByteString value) => new()
+    {
+        Timestamp = Timestamp.FromDateTime(timestamp),
+        Key = key,
+        Type = type,
+        Value = value
+    };
 }

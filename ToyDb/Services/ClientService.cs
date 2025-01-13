@@ -56,6 +56,7 @@ public class ClientService(
         var timer = logger.StartTimedLog(nameof(SetValue), request.Key);
 
         await writeStorageService.SetValue(request.Key, new DatabaseEntry() {
+            Timestamp = request.Timestamp,
             Key = request.Key,
             Type = request.Type,
             Data = request.Value

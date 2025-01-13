@@ -63,5 +63,5 @@ The current capabilities we aim to explore are:
 
 ### Replication
 
-- ToyDb uses leader replication, where a primary replica handles writes and secondary replicas handle reads. The delegation of write and read requests to replicas is handled by the client based on specified configuration.
+- ToyDb uses leader replication, where a primary replica handles writes and secondary replicas handle reads. The use of a leader for writes helps prevent write concurrency and ordering issues. The delegation of write and read requests to replicas is handled by the client based on specified configuration.
 - Writes are asynchronously propagated to all secondary replicas. The number of replicas who response will be awaited is a configurable threshold. Higher thresholds result in higher data consistency across replicas at the cost of higher write latency. Lower thresholds result in lower write latency at the cost of data consistency across replicas. This is trade-off to be determined by users.

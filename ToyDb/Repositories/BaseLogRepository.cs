@@ -1,6 +1,7 @@
 ﻿using Google.Protobuf;
 using ToyDb.Messages;
 using ToyDb.Models;
+using Timestamp = Google.Protobuf.WellKnownTypes.Timestamp;
 
 namespace ToyDb.Repositories;
 
@@ -38,6 +39,7 @@ public abstract class BaseLogRepository
 
         using BinaryWriter binaryWriter = new(fileStream);
 
+        binaryWriter.Write(entry.Timestamp.ToDateTime().ToBinary());
         binaryWriter.Write(key);
         binaryWriter.Write(entry.Type.ToString());
         // TODO: remove Base64 encoding
@@ -89,6 +91,7 @@ public abstract class BaseLogRepository
 
     protected static DatabaseEntry ReadEntry(BinaryReader binaryReader)
     {
+        var rawTimeStamp = binaryReader.ReadInt64();
         var key = binaryReader.ReadString();
         var rawDataType = binaryReader.ReadString();
         var data = binaryReader.ReadString();
@@ -97,7 +100,9 @@ public abstract class BaseLogRepository
         if (!hasValidDataType)
             throw new InvalidDataException($"Data type is not valid. Received {rawDataType}");
 
-        return new DatabaseEntry() { Key = key, Type = dataType, Data = ByteString.FromBase64(data) };
+        var timestamp = Timestamp.FromDateTime(DateTime.FromBinary(rawTimeStamp));
+
+        return new DatabaseEntry() { Timestamp = timestamp, Key = key, Type = dataType, Data = ByteString.FromBase64(data) };
     }
 
     private void GetLatestLogFilePath()

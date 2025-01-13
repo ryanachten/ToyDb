@@ -3,12 +3,14 @@ using System.IO.Hashing;
 using System.Text;
 using ToyDbClient.Extensions;
 using ToyDbClient.Models;
+using ToyDbClient.Services;
 
 namespace ToyDbClient.Clients;
 
-public class PartitionClient(ILogger<PartitionClient> logger, List<PartitionConfiguration> partitionConfigurations, int? completedSecondaryWritesThreshold) : IDbClient
+public class PartitionClient(ILogger<PartitionClient> logger, List<PartitionConfiguration> partitionConfigurations, int? completedSecondaryWritesThreshold)
 {
     private readonly Partition[] _partitions = partitionConfigurations.Select(config => new Partition(config)).ToArray();
+    private readonly MonotonicClock _monotonicClock = new();
 
     public Task<T> GetValue<T>(string key)
     {
@@ -40,14 +42,16 @@ public class PartitionClient(ILogger<PartitionClient> logger, List<PartitionConf
 
     public async Task<T> SetValue<T>(string key, T value)
     {
+        var timestamp = _monotonicClock.GetMonotonicNow();
+
         var partition = GetPartition(key);
 
-        var primaryTask = partition.PrimaryReplica.SetValue(key, value);
+        var primaryTask = partition.PrimaryReplica.SetValue(timestamp, key, value);
         
-        var secondaryTasks = partition.SecondaryReplicas.Select(r => r.SetValue(key, value));
+        var secondaryTasks = partition.SecondaryReplicas.Select(r => r.SetValue(timestamp, key, value));
         var secondaryThresholdTask = secondaryTasks.WhenThresholdCompleted(completedSecondaryWritesThreshold ?? partition.SecondaryReplicas.Length);
 
-        // TODO: handle partial writes, node outages, etc
+        // TODO: handle partital writes, node outages, etc
         await Task.WhenAll(primaryTask, secondaryThresholdTask);
 
         return value;
@@ -55,14 +59,16 @@ public class PartitionClient(ILogger<PartitionClient> logger, List<PartitionConf
 
     public async Task DeleteValue(string key)
     {
+        var timestamp = _monotonicClock.GetMonotonicNow();
+
         var partition = GetPartition(key);
 
-        var primaryTask = partition.PrimaryReplica.DeleteValue(key);
+        var primaryTask = partition.PrimaryReplica.DeleteValue(timestamp, key);
 
-        var secondaryTasks = partition.SecondaryReplicas.Select(r => r.DeleteValue(key));
+        var secondaryTasks = partition.SecondaryReplicas.Select(r => r.DeleteValue(timestamp, key));
         var secondaryThresholdTask = secondaryTasks.WhenThresholdCompleted(completedSecondaryWritesThreshold ?? partition.SecondaryReplicas.Length);
 
-        // TODO: handle partial writes, node outages, etc
+        // TODO: handle partital writes, node outages, etc
         await Task.WhenAll(primaryTask, secondaryThresholdTask);
     }
 

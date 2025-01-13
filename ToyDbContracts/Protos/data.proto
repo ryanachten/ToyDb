@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "google/protobuf/wrappers.proto";
+import "google/protobuf/timestamp.proto";
 
 option csharp_namespace = "ToyDb.Messages";
 
@@ -15,15 +16,17 @@ enum DataType {
 }
 
 message KeyValueRequest {
-	DataType type = 1;
-	string key = 2;
-	google.protobuf.BytesValue value = 3;
+	google.protobuf.Timestamp timestamp = 1;
+	DataType type = 2;
+	string key = 3;
+	google.protobuf.BytesValue value = 4;
 }
 
 message KeyValueResponse {
-	DataType type = 1;
-	string key = 2;
-	google.protobuf.BytesValue value = 3;
+	google.protobuf.Timestamp timestamp = 1;
+	DataType type = 2;
+	string key = 3;
+	google.protobuf.BytesValue value = 4;
 }
 
 service Data {
@@ -44,8 +47,9 @@ message GetAllValuesReresponse {
 	repeated KeyValueResponse values = 1;
 }
 
-message DeleteRequest {
-	string key = 1;
+message DeleteRequest { 
+	google.protobuf.Timestamp timestamp = 1;
+	string key = 2;
 }
 
 message DeleteResponse {
