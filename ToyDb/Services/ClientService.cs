@@ -1,6 +1,6 @@
 ﻿using Grpc.Core;
 using ToyDb.Extensions;
-using ToyDb.Messages;
+using ToyDbContracts.Data;
 using ToyDb.Models;
 
 namespace ToyDb.Services;

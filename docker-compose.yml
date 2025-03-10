@@ -1,4 +1,15 @@
 services:
+  toydb-routing:
+    container_name: toydb-routing
+    image: ${DOCKER_REGISTRY-}toydbrouting
+    build:
+      context: .
+      dockerfile: ToyDbRouting/Dockerfile
+    depends_on:
+    - toydb-p1-r1
+    - toydb-p1-r2
+    - toydb-p2-r1
+    - toydb-p2-r2
   toydb-p1-r1:
     container_name: toydb-p1-r1
     image: ${DOCKER_REGISTRY-}toydb

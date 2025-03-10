@@ -1,4 +1,4 @@
-﻿using ToyDb.Messages;
+﻿using ToyDbContracts.Data;
 using ToyDbClient.Services;
 
 namespace ToyDbUnitTests.Client.Services.Serializer;
@@ -14,11 +14,10 @@ public class GivenUnserializedData
     public void WhenSerializingData_ThenDataShouldBeSerializedBasedonDataType<T>(T value, DataType expectedDataType)
     {
         // Arrange
-        var timestamp = DateTime.UtcNow;
         var key = "hello";
 
         // Act
-        var result = DbSerializer.Serialize(timestamp, key, value);
+        var result = DbSerializer.Serialize(key, value);
         var parsedResult = DbSerializer.Deserialize<T>(new KeyValueResponse()
         {
             Timestamp = result.Timestamp,

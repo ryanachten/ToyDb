@@ -3,7 +3,7 @@ syntax = "proto3";
 import "google/protobuf/wrappers.proto";
 import "google/protobuf/timestamp.proto";
 
-option csharp_namespace = "ToyDb.Messages";
+option csharp_namespace = "ToyDbContracts.Data";
 
 enum DataType {
   Null = 0;

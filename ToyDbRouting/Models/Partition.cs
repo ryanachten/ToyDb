@@ -1,7 +1,7 @@
 ﻿using System.Collections.Immutable;
-using ToyDbClient.Clients;
+using ToyDbRouting.Clients;
 
-namespace ToyDbClient.Models;
+namespace ToyDbRouting.Models;
 
 public class Partition(PartitionConfiguration config)
 {

@@ -1,5 +1,5 @@
 ﻿using Google.Protobuf;
-using ToyDb.Messages;
+using ToyDbContracts.Data;
 using ToyDb.Models;
 using Timestamp = Google.Protobuf.WellKnownTypes.Timestamp;
 

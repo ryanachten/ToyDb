@@ -1,4 +1,17 @@
 services:
+  toydb-routing:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTPS_PORTS=8081
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
+      - ./certs:/https:ro
   toydb-p1-r1:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -8,11 +21,11 @@ services:
       - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
       - NODE_NAME=ToyDb-P1-R1
     ports:
-      - "8080:8080"
-      - "8081:8081"
+      - "8082:8080"
+      - "8083:8081"
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
-      - ~/.aspnet/https:/https:ro
+      - ./certs:/https:ro
   toydb-p1-r2:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -22,26 +35,12 @@ services:
       - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
       - NODE_NAME=ToyDb-P1-R2
     ports:
-      - "8082:8080"
-      - "8083:8081"
-    volumes:
-      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
-      - ~/.aspnet/https:/https:ro
-  toydb-p2-r1:
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_HTTP_PORTS=8080
-      - ASPNETCORE_HTTPS_PORTS=8081
-      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
-      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
-      - NODE_NAME=ToyDb-P2-R1
-    ports:
       - "8084:8080"
       - "8085:8081"
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
-      - ~/.aspnet/https:/https:ro
-  toydb-p2-r2:
+      - ./certs:/https:ro
+  toydb-p2-r1:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
@@ -54,4 +53,18 @@ services:
       - "8087:8081"
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
-      - ~/.aspnet/https:/https:ro
+      - ./certs:/https:ro
+  toydb-p2-r2:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTPS_PORTS=8081
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+      - NODE_NAME=ToyDb-P2-R2
+    ports:
+      - "8088:8080"
+      - "8089:8081"
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
+      - ./certs:/https:ro

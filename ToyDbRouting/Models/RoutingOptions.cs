@@ -1,9 +1,9 @@
-﻿using System.Text.Json;
+﻿namespace ToyDbRouting.Models;
 
-namespace ToyDbClient.Models;
-
-internal class Configuration
+public class RoutingOptions
 {
+    public const string Key = "routing";
+
     /// <summary>
     /// Minimum number of writes to be completed before a request will complete
     /// If the threshold is equal to the number of partitions, this will result in higher latency and higher consistency
@@ -15,14 +15,4 @@ internal class Configuration
     /// Partitions comprising the database network
     /// </summary>
     public required List<PartitionConfiguration> Partitions { get; set; }
-
-    public static Configuration? Load(string filePath)
-    {
-        var contents = File.ReadAllText(filePath);
-
-        return JsonSerializer.Deserialize<Configuration>(contents, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true,
-        });
-    }
 }

@@ -7,10 +7,10 @@ namespace ToyDbClient.Services;
 
 public class CommandService
 {
-    private readonly Option<string> _configOption = new(
-        "config",
-        description: "Path to ToyDb configuration",
-        getDefaultValue: () => "C:\\dev\\ToyDb\\ToyDbClient\\toydb.json"); // TODO: make this a relative path or something
+    private readonly Option<string> _routingAddress = new(
+        "routingAddress",
+        description: "Address for ToyDB routing service",
+        getDefaultValue: () => "https://localhost:8081");
 
     private readonly Argument<string> _keyArgument = new("key", "The key to retrieve");
 
@@ -37,14 +37,14 @@ public class CommandService
         var deleteCommand = new Command("delete", "Delete the value of a key")
         {
             _keyArgument,
-            _configOption
+            _routingAddress
         };
 
-        deleteCommand.SetHandler(async (key, configPath) =>
+        deleteCommand.SetHandler(async (key, routingAddress) =>
         {
-            var client = CreateDbClient(configPath);
+            var client = CreateRoutingClient(routingAddress);
             await client.DeleteValue(key);
-        }, _keyArgument, _configOption);
+        }, _keyArgument, _routingAddress);
 
         return deleteCommand;
     }
@@ -54,15 +54,15 @@ public class CommandService
         var getCommand = new Command("get", "Retrieve the value of a key")
         {
             _keyArgument,
-            _configOption,
+            _routingAddress,
         };
 
-        getCommand.SetHandler(async (key, configPath) =>
+        getCommand.SetHandler(async (key, routingAddress) =>
         {
-            var client = CreateDbClient(configPath);
+            var client = CreateRoutingClient(routingAddress);
             var value = await client.GetValue<string>(key);
             Console.WriteLine(value);
-        }, _keyArgument, _configOption);
+        }, _keyArgument, _routingAddress);
 
         return getCommand;
     }
@@ -74,10 +74,10 @@ public class CommandService
         var setCommand = new Command("set", "Set a key-value pair")
         {
             keyValuePairArgument,
-            _configOption
+            _routingAddress
         };
 
-        setCommand.SetHandler(async (kvp, configPath) =>
+        setCommand.SetHandler(async (kvp, routingAddress) =>
         {
             var parts = kvp.Split('=', 2);
             if (parts.Length != 2)
@@ -89,10 +89,10 @@ public class CommandService
             var key = parts[0];
             var value = parts[1];
 
-            var client = CreateDbClient(configPath);
+            var client = CreateRoutingClient(routingAddress);
             var updatedValue = await client.SetValue(key, value);
             Console.WriteLine(updatedValue);
-        }, keyValuePairArgument, _configOption);
+        }, keyValuePairArgument, _routingAddress);
 
         return setCommand;
     }
@@ -101,31 +101,24 @@ public class CommandService
     {
         var listCommand = new Command("list", "List all key value pairs")
         {
-            _configOption
+            _routingAddress
         };
 
-        listCommand.SetHandler(async (configPath) =>
+        listCommand.SetHandler(async (routingAddress) =>
         {
-            var client = CreateDbClient(configPath);
+            var client = CreateRoutingClient(routingAddress);
             var values = await client.GetAllValues();
             foreach (var value in values)
             {
                 Console.WriteLine($"{value.Key}: {value.Value}");
             }
-        }, _configOption);
+        }, _routingAddress);
 
         return listCommand;
     }
 
-    private static PartitionClient CreateDbClient(string configPath)
+    private static RoutingClient CreateRoutingClient(string routingAddress)
     {
-        var config = Configuration.Load(configPath);
-        
-        if (config == null) throw new CommandLineConfigurationException($"Configuration at {configPath} not found");
-
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-        var logger = loggerFactory.CreateLogger<PartitionClient>();
-
-        return new PartitionClient(logger, config.Partitions, config.CompletedSecondaryWritesThreshold);
+        return new RoutingClient(routingAddress);
     }
 }

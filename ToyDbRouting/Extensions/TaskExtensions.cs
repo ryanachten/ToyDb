@@ -1,4 +1,4 @@
-﻿namespace ToyDbClient.Extensions;
+﻿namespace ToyDbRouting.Extensions;
 
 public static class TaskExtensions
 {

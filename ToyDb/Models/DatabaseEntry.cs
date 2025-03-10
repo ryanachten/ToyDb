@@ -1,6 +1,6 @@
 ﻿using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
-using ToyDb.Messages;
+using ToyDbContracts.Data;
 
 namespace ToyDb.Models;
 
@@ -11,8 +11,9 @@ public class DatabaseEntry
     public required DataType Type { get; set; }
     public required ByteString? Data { get; set; }
 
-    public static DatabaseEntry Null(string key) => new () {
-        Timestamp = Timestamp.FromDateTime(DateTime.MinValue),
+    public static DatabaseEntry Null(string key) => new()
+    {
+        Timestamp = Timestamp.FromDateTime(DateTime.MinValue.ToUniversalTime()),
         Key = key,
         Type = DataType.Null,
         Data = null
