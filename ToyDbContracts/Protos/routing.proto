@@ -1,9 +1,8 @@
 syntax = "proto3";
 
 import "google/protobuf/wrappers.proto";
-import "google/protobuf/timestamp.proto";
 
-option csharp_namespace = "ToyDbContracts.Data";
+option csharp_namespace = "ToyDbContracts.Routing";
 
 enum DataType {
   Null = 0;
@@ -16,20 +15,18 @@ enum DataType {
 }
 
 message KeyValueRequest {
-	google.protobuf.Timestamp timestamp = 1;
 	DataType type = 2;
 	string key = 3;
 	google.protobuf.BytesValue value = 4;
 }
 
 message KeyValueResponse {
-	google.protobuf.Timestamp timestamp = 1;
 	DataType type = 2;
 	string key = 3;
 	google.protobuf.BytesValue value = 4;
 }
 
-service Data {
+service Routing {
 	rpc GetValue (GetRequest) returns (KeyValueResponse);
 	rpc GetAllValues (GetAllValuesRequest) returns (GetAllValuesResponse);
 	rpc SetValue (KeyValueRequest) returns (KeyValueResponse);
@@ -48,7 +45,6 @@ message GetAllValuesResponse {
 }
 
 message DeleteRequest { 
-	google.protobuf.Timestamp timestamp = 1;
 	string key = 2;
 }
 

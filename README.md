@@ -8,6 +8,7 @@ The database is currently a simple key-value store which receives commands using
 
 - [ToyDb](./ToyDb/) - Database server source code
 - [ToyDbClient](./ToyDbClient/) - Database client source code
+- [ToyDbRouting](./ToyDbRouting/) - Database routing layer
 - [ToyDbContracts](./ToyDbContracts/) - Definitions of the protobuf messages accepted by the database
 
 ## Learning objectives
@@ -28,7 +29,7 @@ The current capabilities we aim to explore are:
 ### Prerequisites
 
 - Generate HTTPS certificate:
-  - `dotnet dev-certs https -ep "$env:USERPROFILE\.aspnet\https\aspnetapp.pfx"  -p password -t`
+  - `dotnet dev-certs https -ep "./certs/aspnetapp.pfx"  -p password -t`
 
 ### Via client
 
@@ -55,6 +56,11 @@ The current capabilities we aim to explore are:
 ### Concurrent writes
 
 - To ensure that there is no data loss during writes, a write process must obtain a lock on the AoL before appending the key-value pair. To avoid issues in lock contention between concurrent writes and system processes such as log compaction,the writes for each partition are queued and applied sequentially. This has the added benefit of ensuring writes occur in order, however it comes at a potential performance cost, since writes can now only be parallelized on a partition-basis.
+
+### Routing layer
+
+- A routing layer manages partition access and replication management. This simplifies client integration by keeping the client agnostic to the nodes that comprise the underlying database. It should also make node failover simpler by providing an orchestration layer without the need for node consensus.
+- There is a risk where the routing layer becomes the single point of failure. This can hopefully be overcome by provisioning multiple routing instances to fallback to in the case of failure.
 
 ### Partitioning
 

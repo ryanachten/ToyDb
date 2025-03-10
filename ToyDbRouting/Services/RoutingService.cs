@@ -1,34 +1,39 @@
-﻿using Google.Protobuf.WellKnownTypes;
+﻿using AutoMapper;
+using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Options;
 using System.IO.Hashing;
 using System.Text;
-using ToyDbContracts.Data;
 using ToyDbRouting.Extensions;
 using ToyDbRouting.Models;
+using Data = ToyDbContracts.Data;
+using Routing = ToyDbContracts.Routing;
 
 namespace ToyDbRouting.Services;
 
 public class RoutingService(
     IOptions<RoutingOptions> routingOptions,
-    ILogger<RoutingService> logger
-) : Data.DataBase
+    ILogger<RoutingService> logger,
+    IMapper mapper
+) : Routing.Routing.RoutingBase
 {
     private readonly Partition[] _partitions = routingOptions.Value.Partitions.Select(config => new Partition(config)).ToArray();
     private readonly NtpClock _ntpClock = new();
     private readonly int? completedSecondaryWritesThreshold = routingOptions.Value.CompletedSecondaryWritesThreshold;
 
-    public override Task<KeyValueResponse> GetValue(GetRequest request, ServerCallContext context)
+    public override async Task<Routing.KeyValueResponse> GetValue(Routing.GetRequest request, ServerCallContext context)
     {
         var partition = GetPartition(request.Key);
 
         var replica = partition.GetReadReplica();
-        return replica.GetValue(request.Key);
+        var response = await replica.GetValue(request.Key);
+
+        return mapper.Map<Routing.KeyValueResponse>(response);
     }
 
-    public override async Task<GetAllValuesReresponse> GetAllValues(GetAllValuesRequest request, ServerCallContext context)
+    public override async Task<Routing.GetAllValuesResponse> GetAllValues(Routing.GetAllValuesRequest request, ServerCallContext context)
     {
-        var allValues = new GetAllValuesReresponse();
+        var allValues = new Routing.GetAllValuesResponse();
 
         foreach (var partition in _partitions)
         {
@@ -41,7 +46,7 @@ public class RoutingService(
             {
                 if (value == null) continue;
 
-                allValues.Values.Add(value);
+                allValues.Values.Add(mapper.Map<Routing.KeyValueResponse>(value));
             }
 
         }
@@ -49,25 +54,25 @@ public class RoutingService(
         return allValues;
     }
 
-    public override async Task<KeyValueResponse> SetValue(KeyValueRequest request, ServerCallContext context)
+    public override async Task<Routing.KeyValueResponse> SetValue(Routing.KeyValueRequest request, ServerCallContext context)
     {
-        // TODO: ideally we would have different GRCP contracts for client vs routing to avoid this?
-        request.Timestamp = Timestamp.FromDateTime(_ntpClock.Now);
+        var dbRequest = mapper.Map<Data.KeyValueRequest>(request);
+        dbRequest.Timestamp = Timestamp.FromDateTime(_ntpClock.Now);
 
         var partition = GetPartition(request.Key);
 
-        var primaryTask = partition.PrimaryReplica.SetValue(request);
+        var primaryTask = partition.PrimaryReplica.SetValue(dbRequest);
 
-        var secondaryTasks = partition.SecondaryReplicas.Select(r => r.SetValue(request));
+        var secondaryTasks = partition.SecondaryReplicas.Select(r => r.SetValue(dbRequest));
         var secondaryThresholdTask = secondaryTasks.WhenThresholdCompleted(completedSecondaryWritesThreshold ?? partition.SecondaryReplicas.Length);
 
         // TODO: handle partital writes, node outages, etc
         await Task.WhenAll(primaryTask, secondaryThresholdTask);
 
-        return primaryTask.Result;
+        return mapper.Map<Routing.KeyValueResponse>(primaryTask.Result);
     }
 
-    public override async Task<DeleteResponse> DeleteValue(DeleteRequest request, ServerCallContext context)
+    public override async Task<Routing.DeleteResponse> DeleteValue(Routing.DeleteRequest request, ServerCallContext context)
     {
         var timestamp = _ntpClock.Now;
 
@@ -81,7 +86,7 @@ public class RoutingService(
         // TODO: handle partital writes, node outages, etc
         await Task.WhenAll(primaryTask, secondaryThresholdTask);
 
-        return new DeleteResponse();
+        return new Routing.DeleteResponse();
     }
 
     /// <summary>

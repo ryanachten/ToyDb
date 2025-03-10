@@ -1,6 +1,6 @@
 ﻿using Google.Protobuf;
-using ToyDbContracts.Data;
 using ToyDb.Models;
+using ToyDbContracts.Data;
 using Timestamp = Google.Protobuf.WellKnownTypes.Timestamp;
 
 namespace ToyDb.Repositories;
@@ -42,7 +42,6 @@ public abstract class BaseLogRepository
         binaryWriter.Write(entry.Timestamp.ToDateTime().ToBinary());
         binaryWriter.Write(key);
         binaryWriter.Write(entry.Type.ToString());
-        // TODO: remove Base64 encoding
         binaryWriter.Write(entry.Data?.ToBase64() ?? NullMarker.ToBase64());
 
         return currentOffset;
@@ -126,7 +125,7 @@ public abstract class BaseLogRepository
         }
 
         logLocation = latestFilePath;
-        
+
         _logger.LogInformation("Latest log file located at: {Location}", latestFilePath);
     }
 }

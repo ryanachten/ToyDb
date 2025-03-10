@@ -31,7 +31,7 @@ public class ClientService(
         return Task.FromResult(response);
     }
 
-    public override Task<GetAllValuesReresponse> GetAllValues(GetAllValuesRequest request, ServerCallContext context)
+    public override Task<GetAllValuesResponse> GetAllValues(GetAllValuesRequest request, ServerCallContext context)
     {
         var timer = logger.StartTimedLog(nameof(GetAllValues));
         
@@ -43,7 +43,7 @@ public class ClientService(
             Value = x.Value.Data
         });
 
-        var response = new GetAllValuesReresponse();
+        var response = new GetAllValuesResponse();
         response.Values.AddRange(keyValuePairs);
 
         timer.Stop();

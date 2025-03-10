@@ -1,11 +1,13 @@
 using ToyDbRouting.Models;
 using ToyDbRouting.Services;
+using ToyDbRouting.Utilities;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<RoutingOptions>(builder.Configuration.GetSection(RoutingOptions.Key));
 
 builder.Services.AddGrpc();
+builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
 
 var app = builder.Build();
 

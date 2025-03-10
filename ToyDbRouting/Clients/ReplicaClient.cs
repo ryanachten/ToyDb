@@ -41,7 +41,7 @@ public class ReplicaClient
         });
     }
 
-    public async Task<GetAllValuesReresponse> GetAllValues()
+    public async Task<GetAllValuesResponse> GetAllValues()
     {
         return await _dataClient.GetAllValuesAsync(new GetAllValuesRequest());
     }

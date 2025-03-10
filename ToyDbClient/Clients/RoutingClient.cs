@@ -1,17 +1,17 @@
 ﻿using Grpc.Net.Client;
-using ToyDbContracts.Data;
 using ToyDbClient.Services;
+using ToyDbContracts.Routing;
 
 namespace ToyDbClient.Clients;
 
 public class RoutingClient
 {
-    private readonly Data.DataClient _routingClient;
+    private readonly Routing.RoutingClient _routingClient;
 
     public RoutingClient(string routingAddress)
     {
         var channel = GrpcChannel.ForAddress(routingAddress);
-        _routingClient = new Data.DataClient(channel);
+        _routingClient = new Routing.RoutingClient(channel);
     }
 
     public async Task<T> GetValue<T>(string key)

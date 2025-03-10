@@ -1,5 +1,5 @@
 ﻿using Google.Protobuf;
-using ToyDbContracts.Data;
+using ToyDbContracts.Routing;
 
 namespace ToyDbClient.Services;
 
@@ -19,7 +19,6 @@ public static class DbSerializer
     /// Serializes data into key-value pair format accepted by the database
     /// </summary>
     /// <typeparam name="T">Type of the requested data</typeparam>
-    /// <param name="timestamp">Timestamp update occurred</param>
     /// <param name="key">Key for value retrieval</param>
     /// <param name="value">Value to be encoded into binary format</param>
     /// <returns>Serialized data object</returns>
