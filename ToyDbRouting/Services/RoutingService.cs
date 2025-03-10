@@ -14,11 +14,11 @@ namespace ToyDbRouting.Services;
 public class RoutingService(
     IOptions<RoutingOptions> routingOptions,
     ILogger<RoutingService> logger,
-    IMapper mapper
+    IMapper mapper,
+    INtpService ntpService
 ) : Routing.Routing.RoutingBase
 {
     private readonly Partition[] _partitions = routingOptions.Value.Partitions.Select(config => new Partition(config)).ToArray();
-    private readonly NtpClock _ntpClock = new();
     private readonly int? completedSecondaryWritesThreshold = routingOptions.Value.CompletedSecondaryWritesThreshold;
 
     public override async Task<Routing.KeyValueResponse> GetValue(Routing.GetRequest request, ServerCallContext context)
@@ -57,7 +57,7 @@ public class RoutingService(
     public override async Task<Routing.KeyValueResponse> SetValue(Routing.KeyValueRequest request, ServerCallContext context)
     {
         var dbRequest = mapper.Map<Data.KeyValueRequest>(request);
-        dbRequest.Timestamp = Timestamp.FromDateTime(_ntpClock.Now);
+        dbRequest.Timestamp = Timestamp.FromDateTime(ntpService.Now);
 
         var partition = GetPartition(request.Key);
 
@@ -74,7 +74,7 @@ public class RoutingService(
 
     public override async Task<Routing.DeleteResponse> DeleteValue(Routing.DeleteRequest request, ServerCallContext context)
     {
-        var timestamp = _ntpClock.Now;
+        var timestamp = ntpService.Now;
 
         var partition = GetPartition(request.Key);
 
