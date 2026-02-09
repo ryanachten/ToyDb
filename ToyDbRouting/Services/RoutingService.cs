@@ -26,7 +26,7 @@ public class RoutingService(
         var partition = GetPartition(request.Key);
 
         var replica = partition.GetReadReplica();
-        var response = await replica.GetValue(request.Key);
+        var response = await replica.GetValueRaw(request.Key);
 
         return mapper.Map<Routing.KeyValueResponse>(response);
     }
@@ -35,7 +35,7 @@ public class RoutingService(
     {
         var allValues = new Routing.GetAllValuesResponse();
 
-        var partitionRequests = _partitions.Select(p => p.GetReadReplica().GetAllValues());
+        var partitionRequests = _partitions.Select(p => p.GetReadReplica().GetAllValuesRaw());
 
         await Task.WhenAll(partitionRequests);
 
@@ -61,9 +61,9 @@ public class RoutingService(
 
         var partition = GetPartition(request.Key);
 
-        var primaryTask = partition.PrimaryReplica.SetValue(dbRequest);
+        var primaryTask = partition.PrimaryReplica.SetValueRaw(dbRequest);
 
-        var secondaryTasks = partition.SecondaryReplicas.Select(r => r.SetValue(dbRequest));
+        var secondaryTasks = partition.SecondaryReplicas.Select(r => r.SetValueRaw(dbRequest));
         var secondaryThresholdTask = secondaryTasks.WhenThresholdCompleted(completedSecondaryWritesThreshold ?? partition.SecondaryReplicas.Length);
 
         // TODO: handle partital writes, node outages, etc
