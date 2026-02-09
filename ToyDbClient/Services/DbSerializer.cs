@@ -62,7 +62,7 @@ public static class DbSerializer
         var storedType = keyValuePair.Type;
         var value = keyValuePair.Value;
 
-        if (value == null || storedType == DataType.Null || value.Length == 0)
+        if (value == null || storedType == DataType.Null)
             return (T)(object)null!;
 
         var hasBinding = _typeBindings.TryGetValue(typeof(T), out var requestedType);

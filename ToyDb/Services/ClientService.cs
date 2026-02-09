@@ -62,13 +62,15 @@ public class ClientService(
             Data = request.Value
         });
 
+        var storedEntry = readStorageService.GetValue(request.Key);
+
         timer.Stop();
 
         return new KeyValueResponse()
         {
-            Key = request.Key,
-            Type = request.Type,
-            Value = request.Value
+            Key = storedEntry.Key,
+            Type = storedEntry.Type,
+            Value = storedEntry.Data
         };
     }
 
