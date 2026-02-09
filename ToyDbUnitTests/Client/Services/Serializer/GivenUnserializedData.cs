@@ -1,5 +1,5 @@
-﻿using ToyDbContracts.Data;
-using ToyDbClient.Services;
+﻿using ToyDbClient.Services;
+using ToyDbContracts.Routing;
 
 namespace ToyDbUnitTests.Client.Services.Serializer;
 
@@ -13,20 +13,16 @@ public class GivenUnserializedData
     [InlineData(true, DataType.Bool)]
     public void WhenSerializingData_ThenDataShouldBeSerializedBasedonDataType<T>(T value, DataType expectedDataType)
     {
-        // Arrange
         var key = "hello";
 
-        // Act
         var result = DbSerializer.Serialize(key, value);
         var parsedResult = DbSerializer.Deserialize<T>(new KeyValueResponse()
         {
-            Timestamp = result.Timestamp,
             Key = key,
             Type = result.Type,
             Value = result.Value
         });
 
-        // Assert
         Assert.Equal(expectedDataType, result.Type);
         Assert.Equal(value, parsedResult);
     }

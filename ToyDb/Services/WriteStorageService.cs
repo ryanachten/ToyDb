@@ -62,6 +62,7 @@ namespace ToyDb.Services
             var offset = _storeRepository.Append(key, value);
 
             _keyOffsetCache.Set(key, offset);
+            _keyEntryCache.Set(key, value);
         }
 
         private void ExecuteDeleteValue(string key)
@@ -93,7 +94,7 @@ namespace ToyDb.Services
         private Task EnqueueWrite(Action action)
         {
             var task = new Task(action);
-            
+
             _writeQueue.Enqueue(task);
             _writeSemaphore.Release(); // Signal that a write is available
 
