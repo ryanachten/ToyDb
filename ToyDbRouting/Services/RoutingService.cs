@@ -35,20 +35,20 @@ public class RoutingService(
     {
         var allValues = new Routing.GetAllValuesResponse();
 
-        foreach (var partition in _partitions)
+        var partitionRequests = _partitions.Select(p => p.GetReadReplica().GetAllValues());
+
+        await Task.WhenAll(partitionRequests);
+
+        foreach (var partition in partitionRequests)
         {
-            var replica = partition.GetReadReplica();
-            var response = await replica.GetAllValues();
+            if (partition.Result.Values == null) continue;
 
-            if (response == null) continue;
-
-            foreach (var value in response.Values)
+            foreach (var value in partition.Result.Values)
             {
                 if (value == null) continue;
 
                 allValues.Values.Add(mapper.Map<Routing.KeyValueResponse>(value));
             }
-
         }
 
         return allValues;
