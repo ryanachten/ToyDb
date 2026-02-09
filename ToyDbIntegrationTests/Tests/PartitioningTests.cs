@@ -38,8 +38,8 @@ public class PartitioningTests
             await _routingClient.SetValue(key, value);
         }
 
-        var p1AllValues = await _p1r1Client.GetAllValues();
-        var p2AllValues = await _p2r1Client.GetAllValues();
+        var p1AllValues = await _p1r1Client.GetAllValuesAsDictionary();
+        var p2AllValues = await _p2r1Client.GetAllValuesAsDictionary();
 
         var keysInP1 = keys.Where(p1AllValues.ContainsKey).ToList();
         var keysInP2 = keys.Where(p2AllValues.ContainsKey).ToList();
@@ -62,8 +62,8 @@ public class PartitioningTests
         await _routingClient.SetValue(key, value2);
         await _routingClient.SetValue(key, value3);
 
-        var p1AllValues = await _p1r1Client.GetAllValues();
-        var p2AllValues = await _p2r1Client.GetAllValues();
+        var p1AllValues = await _p1r1Client.GetAllValuesAsDictionary();
+        var p2AllValues = await _p2r1Client.GetAllValuesAsDictionary();
 
         var inP1 = p1AllValues.ContainsKey(key);
         var inP2 = p2AllValues.ContainsKey(key);

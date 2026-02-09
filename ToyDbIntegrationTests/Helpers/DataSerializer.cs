@@ -1,7 +1,7 @@
 using Google.Protobuf;
 using ToyDbContracts.Data;
 
-namespace ToyDbRouting.Services;
+namespace ToyDbIntegrationTests.Helpers;
 
 public static class DataSerializer
 {

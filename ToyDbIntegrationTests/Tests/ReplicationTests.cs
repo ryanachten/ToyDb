@@ -36,10 +36,10 @@ public class ReplicationTests
         await _routingClient.SetValue(key, expectedValue);
         await Task.Delay(500);
 
-        var valueFromP1R1 = await _p1r1Client.GetValue<string>(key);
-        var valueFromP1R2 = await _p1r2Client.GetValue<string>(key);
-        var valueFromP2R1 = await _p2r1Client.GetValue<string>(key);
-        var valueFromP2R2 = await _p2r2Client.GetValue<string>(key);
+        var valueFromP1R1 = await _p1r1Client.GetAndDeserializeValue<string>(key);
+        var valueFromP1R2 = await _p1r2Client.GetAndDeserializeValue<string>(key);
+        var valueFromP2R1 = await _p2r1Client.GetAndDeserializeValue<string>(key);
+        var valueFromP2R2 = await _p2r2Client.GetAndDeserializeValue<string>(key);
 
         var partition1HasKey = valueFromP1R1 != null && valueFromP1R2 != null;
         var partition2HasKey = valueFromP2R1 != null && valueFromP2R2 != null;
@@ -75,10 +75,10 @@ public class ReplicationTests
         await _routingClient.SetValue(key, value3);
         await Task.Delay(500);
 
-        var valueFromP1R1 = await _p1r1Client.GetValue<string>(key);
-        var valueFromP1R2 = await _p1r2Client.GetValue<string>(key);
-        var valueFromP2R1 = await _p2r1Client.GetValue<string>(key);
-        var valueFromP2R2 = await _p2r2Client.GetValue<string>(key);
+        var valueFromP1R1 = await _p1r1Client.GetAndDeserializeValue<string>(key);
+        var valueFromP1R2 = await _p1r2Client.GetAndDeserializeValue<string>(key);
+        var valueFromP2R1 = await _p2r1Client.GetAndDeserializeValue<string>(key);
+        var valueFromP2R2 = await _p2r2Client.GetAndDeserializeValue<string>(key);
 
         var partition1HasKey = valueFromP1R1 != null && valueFromP1R2 != null;
         var partition2HasKey = valueFromP2R1 != null && valueFromP2R2 != null;
@@ -107,10 +107,10 @@ public class ReplicationTests
         await _routingClient.DeleteValue(key);
         await Task.Delay(500);
 
-        var valueFromP1R1 = await _p1r1Client.GetValue<string>(key);
-        var valueFromP1R2 = await _p1r2Client.GetValue<string>(key);
-        var valueFromP2R1 = await _p2r1Client.GetValue<string>(key);
-        var valueFromP2R2 = await _p2r2Client.GetValue<string>(key);
+        var valueFromP1R1 = await _p1r1Client.GetAndDeserializeValue<string>(key);
+        var valueFromP1R2 = await _p1r2Client.GetAndDeserializeValue<string>(key);
+        var valueFromP2R1 = await _p2r1Client.GetAndDeserializeValue<string>(key);
+        var valueFromP2R2 = await _p2r2Client.GetAndDeserializeValue<string>(key);
 
         Assert.Null(valueFromP1R1);
         Assert.Null(valueFromP1R2);
@@ -124,13 +124,13 @@ public class ReplicationTests
         var key = TestDataGenerator.CreateTestKey("partition1_direct_write");
         var expectedValue = TestDataGenerator.CreateRandomValue();
 
-        await _p1r1Client.SetValue(key, expectedValue);
+        await _p1r1Client.SetAndDeserializeValue(key, expectedValue);
         await Task.Delay(500);
 
-        var valueFromP1R1 = await _p1r1Client.GetValue<string>(key);
-        var valueFromP1R2 = await _p1r2Client.GetValue<string>(key);
-        var valueFromP2R1 = await _p2r1Client.GetValue<string>(key);
-        var valueFromP2R2 = await _p2r2Client.GetValue<string>(key);
+        var valueFromP1R1 = await _p1r1Client.GetAndDeserializeValue<string>(key);
+        var valueFromP1R2 = await _p1r2Client.GetAndDeserializeValue<string>(key);
+        var valueFromP2R1 = await _p2r1Client.GetAndDeserializeValue<string>(key);
+        var valueFromP2R2 = await _p2r2Client.GetAndDeserializeValue<string>(key);
 
         Assert.Equal(expectedValue, valueFromP1R1);
         Assert.Null(valueFromP1R2);
@@ -147,13 +147,13 @@ public class ReplicationTests
         var value2 = TestDataGenerator.CreateRandomValue();
 
         await _routingClient.SetValue(keyThroughRouting, value1);
-        await _p1r1Client.SetValue(keyDirectWrite, value2);
+        await _p1r1Client.SetAndDeserializeValue(keyDirectWrite, value2);
         await Task.Delay(500);
 
-        var routingValueR1 = await _p1r1Client.GetValue<string>(keyThroughRouting);
-        var routingValueR2 = await _p1r2Client.GetValue<string>(keyThroughRouting);
-        var directValueR1 = await _p1r1Client.GetValue<string>(keyDirectWrite);
-        var directValueR2 = await _p1r2Client.GetValue<string>(keyDirectWrite);
+        var routingValueR1 = await _p1r1Client.GetAndDeserializeValue<string>(keyThroughRouting);
+        var routingValueR2 = await _p1r2Client.GetAndDeserializeValue<string>(keyThroughRouting);
+        var directValueR1 = await _p1r1Client.GetAndDeserializeValue<string>(keyDirectWrite);
+        var directValueR2 = await _p1r2Client.GetAndDeserializeValue<string>(keyDirectWrite);
 
         if (routingValueR1 != null)
         {

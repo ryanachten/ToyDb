@@ -10,7 +10,6 @@ services:
       - "8080:8080"
       - "8081:8081"
     volumes:
-      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
       - ./certs:/https:ro
   toydb-p1-r1:
     environment:
@@ -24,7 +23,6 @@ services:
       - "8082:8080"
       - "8083:8081"
     volumes:
-      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
       - ./certs:/https:ro
   toydb-p1-r2:
     environment:
@@ -38,7 +36,6 @@ services:
       - "8084:8080"
       - "8085:8081"
     volumes:
-      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
       - ./certs:/https:ro
   toydb-p2-r1:
     environment:
@@ -52,7 +49,6 @@ services:
       - "8086:8080"
       - "8087:8081"
     volumes:
-      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
       - ./certs:/https:ro
   toydb-p2-r2:
     environment:
@@ -66,5 +62,4 @@ services:
       - "8088:8080"
       - "8089:8081"
     volumes:
-      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
       - ./certs:/https:ro
