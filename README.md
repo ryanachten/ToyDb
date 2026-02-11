@@ -29,7 +29,8 @@ The current capabilities we aim to explore are:
 ### Prerequisites
 
 - Generate HTTPS certificate:
-  - `dotnet dev-certs https -ep "./certs/aspnetapp.pfx"  -p password -t`
+  - `dotnet dev-certs https --trust -ep "./certs/aspnetapp.pfx" -p password`
+  - If that doesn't work, try this `dotnet dev-certs https --trust --export-path certs/aspnetapp.crt`
 
 ### Via client
 
