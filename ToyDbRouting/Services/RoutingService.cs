@@ -22,13 +22,13 @@ public class RoutingService(
     private readonly Partition[] _partitions = routingOptions.Value.Partitions.Select(config => new Partition(config)).ToArray();
     private readonly int? completedSecondaryWritesThreshold = routingOptions.Value.CompletedSecondaryWritesThreshold;
 
-    private enum OperationType
+    internal enum OperationType
     {
         Write,
         Delete
     }
 
-    private record ReplicaExecutionResult<TPrimaryResponse>
+    internal record ReplicaExecutionResult<TPrimaryResponse>
     {
         public required TPrimaryResponse PrimaryResponse { get; init; }
         public required int ReplicasCompleted { get; init; }
@@ -114,7 +114,7 @@ public class RoutingService(
         };
     }
 
-    private async Task<ReplicaExecutionResult<TPrimaryResponse>> ExecuteWithReplicaThresholdAsync<TPrimaryResponse>(
+    internal async Task<ReplicaExecutionResult<TPrimaryResponse>> ExecuteWithReplicaThresholdAsync<TPrimaryResponse>(
         Func<Task<TPrimaryResponse>> primaryOperation,
         Func<ReplicaClient, int, Task> secondaryOperation,
         Partition partition,
