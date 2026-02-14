@@ -1,9 +1,10 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Options;
 using System.IO.Hashing;
 using System.Text;
+using ToyDbRouting.Clients;
 using ToyDbRouting.Extensions;
 using ToyDbRouting.Models;
 using Data = ToyDbContracts.Data;
@@ -20,6 +21,20 @@ public class RoutingService(
 {
     private readonly Partition[] _partitions = routingOptions.Value.Partitions.Select(config => new Partition(config)).ToArray();
     private readonly int? completedSecondaryWritesThreshold = routingOptions.Value.CompletedSecondaryWritesThreshold;
+
+    private enum OperationType
+    {
+        Write,
+        Delete
+    }
+
+    private record ReplicaExecutionResult<TPrimaryResponse>
+    {
+        public required TPrimaryResponse PrimaryResponse { get; init; }
+        public required int ReplicasCompleted { get; init; }
+        public required int ReplicasTotal { get; init; }
+        public required List<string> Warnings { get; init; }
+    }
 
     public override async Task<Routing.KeyValueResponse> GetValue(Routing.GetRequest request, ServerCallContext context)
     {
@@ -61,15 +76,19 @@ public class RoutingService(
 
         var partition = GetPartition(request.Key);
 
-        var primaryTask = partition.PrimaryReplica.SetValue(dbRequest);
+        var result = await ExecuteWithReplicaThresholdAsync(
+            () => partition.PrimaryReplica.SetValue(dbRequest),
+            (replica, index) => replica.SetValue(dbRequest),
+            partition,
+            request.Key,
+            OperationType.Write);
 
-        var secondaryTasks = partition.SecondaryReplicas.Select(r => r.SetValue(dbRequest));
-        var secondaryThresholdTask = secondaryTasks.WhenThresholdCompleted(completedSecondaryWritesThreshold ?? partition.SecondaryReplicas.Length);
+        var response = mapper.Map<Routing.KeyValueResponse>(result.PrimaryResponse);
+        response.ReplicasWritten = result.ReplicasCompleted;
+        response.ReplicasTotal = result.ReplicasTotal;
+        response.Warnings.AddRange(result.Warnings);
 
-        // TODO: handle partital writes, node outages, etc
-        await Task.WhenAll(primaryTask, secondaryThresholdTask);
-
-        return mapper.Map<Routing.KeyValueResponse>(primaryTask.Result);
+        return response;
     }
 
     public override async Task<Routing.DeleteResponse> DeleteValue(Routing.DeleteRequest request, ServerCallContext context)
@@ -78,15 +97,123 @@ public class RoutingService(
 
         var partition = GetPartition(request.Key);
 
-        var primaryTask = partition.PrimaryReplica.DeleteValue(timestamp, request.Key);
+        var result = await ExecuteWithReplicaThresholdAsync(
+            async () =>
+            {
+                await partition.PrimaryReplica.DeleteValue(timestamp, request.Key);
+                return 0;
+            },
+            (replica, index) => replica.DeleteValue(timestamp, request.Key),
+            partition,
+            request.Key,
+            OperationType.Delete);
 
-        var secondaryTasks = partition.SecondaryReplicas.Select(r => r.DeleteValue(timestamp, request.Key));
-        var secondaryThresholdTask = secondaryTasks.WhenThresholdCompleted(completedSecondaryWritesThreshold ?? partition.SecondaryReplicas.Length);
+        return new Routing.DeleteResponse
+        {
+            Warnings = { result.Warnings }
+        };
+    }
 
-        // TODO: handle partital writes, node outages, etc
-        await Task.WhenAll(primaryTask, secondaryThresholdTask);
+    private async Task<ReplicaExecutionResult<TPrimaryResponse>> ExecuteWithReplicaThresholdAsync<TPrimaryResponse>(
+        Func<Task<TPrimaryResponse>> primaryOperation,
+        Func<ReplicaClient, int, Task> secondaryOperation,
+        Partition partition,
+        string key,
+        OperationType operationType)
+    {
+        var operationName = operationType == OperationType.Write ? "write" : "delete";
+        var operationNamePast = operationType == OperationType.Write ? "wrote" : "deleted";
 
-        return new Routing.DeleteResponse();
+        int replicasCompleted = 0;
+        int replicasTotal = 1 + partition.SecondaryReplicas.Length;
+        var warnings = new List<string>();
+
+        TPrimaryResponse primaryResponse;
+        try
+        {
+            primaryResponse = await RetryHelper.ExecuteWithRetryAsync(
+                primaryOperation,
+                routingOptions.Value.PrimaryRetryOptions,
+                logger,
+                $"Primary {operationName} for key {key}");
+            replicasCompleted++;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError("Primary replica {Operation} failed for key {Key}: {Error}",
+                operationName, key, ex.Message);
+            throw;
+        }
+
+        var threshold = completedSecondaryWritesThreshold ?? partition.SecondaryReplicas.Length;
+        var successfulSecondaries = 0;
+        var secondaryTasksCompleted = 0;
+
+        var secondaryTasks = partition.SecondaryReplicas.Select(async (replica, index) =>
+        {
+            try
+            {
+                await RetryHelper.ExecuteWithRetryAsync(
+                    () => secondaryOperation(replica, index),
+                    routingOptions.Value.SecondaryRetryOptions,
+                    logger,
+                    $"Secondary[{index}] {operationName} for key {key}");
+                return (Index: index, Success: true);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning("Secondary replica[{Index}] {Operation} failed for key {Key}: {Error}",
+                    index, operationName, key, ex.Message);
+                return (Index: index, Success: false);
+            }
+        }).ToList();
+
+        await foreach (var result in Task.WhenEach(secondaryTasks))
+        {
+            var (index, success) = await result;
+            secondaryTasksCompleted++;
+
+            if (success)
+            {
+                successfulSecondaries++;
+                replicasCompleted++;
+            }
+
+            if (successfulSecondaries >= threshold)
+            {
+                break;
+            }
+        }
+
+        if (successfulSecondaries < threshold)
+        {
+            throw new Exception($"Failed to meet secondary {operationName} threshold. Required: {threshold}, Succeeded: {successfulSecondaries}");
+        }
+
+        var remainingTasks = secondaryTasks.Skip(secondaryTasksCompleted).ToList();
+        if (remainingTasks.Count != 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.WhenAll(remainingTasks);
+            });
+        }
+
+        if (replicasCompleted < replicasTotal)
+        {
+            var failedCount = replicasTotal - replicasCompleted;
+            var message = $"Partial success: {operationNamePast} to {replicasCompleted} of {replicasTotal} replicas ({failedCount} replica(s) failed)";
+            warnings.Add(message);
+            logger.LogWarning("{Message} for key {Key}", message, key);
+        }
+
+        return new ReplicaExecutionResult<TPrimaryResponse>
+        {
+            PrimaryResponse = primaryResponse,
+            ReplicasCompleted = replicasCompleted,
+            ReplicasTotal = replicasTotal,
+            Warnings = warnings
+        };
     }
 
     /// <summary>
