@@ -1,3 +1,6 @@
+## Guiding princples
+- Optimise for performance while maintaining readability
+
 ## Code conventions
 - DO NOT add any comments unless explicitly instructed to do so
 - DO NOT update README files unless explicitly instructed to do so

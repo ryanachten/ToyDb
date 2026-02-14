@@ -24,6 +24,9 @@ message KeyValueResponse {
 	DataType type = 2;
 	string key = 3;
 	google.protobuf.BytesValue value = 4;
+	int32 replicas_written = 5;
+	int32 replicas_total = 6;
+	repeated string warnings = 7;
 }
 
 service Routing {
@@ -49,4 +52,5 @@ message DeleteRequest {
 }
 
 message DeleteResponse {
+	repeated string warnings = 1;
 }
