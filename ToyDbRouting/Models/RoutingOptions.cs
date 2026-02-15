@@ -37,6 +37,11 @@ public class RoutingOptions
         BaseDelayMs = 100,
         MaxDelayMs = 5000
     };
+
+    /// <summary>
+    /// Interval (in seconds) between health probes
+    /// </summary>
+    public int HealthProbeIntervalSeconds { get; set; } = 3;
 }
 
 public class RetryOptions

@@ -4,6 +4,9 @@
 ## Code conventions
 - DO NOT add any comments unless explicitly instructed to do so
 - DO NOT update README files unless explicitly instructed to do so
+- Avoid string interpolation in our logs, prefer to use message templates instead, i.e
+    - Don't use: `logger.LogInformation($"Health status changed for {address}: {previous} -> {status}");`
+    - Do use: `logger.LogInformation("Health status changed for {Address}: {Previous} -> {Status}", address, previous, status);`
 
 ## Tests
 - Always ensure tests pass when making changes

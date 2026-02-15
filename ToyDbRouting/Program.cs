@@ -8,6 +8,7 @@ builder.Services.Configure<RoutingOptions>(builder.Configuration.GetSection(Rout
 builder.Services.AddSingleton<INtpService, NtpService>();
 
 builder.Services.AddGrpc();
+builder.Services.AddHostedService<HealthProbeService>();
 builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
 
 var app = builder.Build();
