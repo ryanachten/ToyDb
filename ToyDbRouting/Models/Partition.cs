@@ -15,13 +15,23 @@ public class Partition(PartitionConfiguration config)
     // Come back to it later
     public ReplicaClient GetReadReplica(IReadOnlyDictionary<string, ServingStatus> healthStates)
     {
-        var healthySecondary = GetHealthySecondaryReplica(healthStates);
-        if (healthySecondary != null) return healthySecondary;
+        var healthySecondaries = GetHealthySecondaryReplicas(healthStates);
+        if (healthySecondaries.Count > 0)
+        {
+            var rand = new Random();
+            return healthySecondaries[rand.Next(healthySecondaries.Count)];
+        }
 
         var healthyPrimary = GetHealthyPrimaryReplica(healthStates);
         if (healthyPrimary != null) return healthyPrimary;
 
         throw new RpcException(new Status(StatusCode.Unavailable, $"Partition {config.PartitionId} has no healthy replcas for reads"));
+    }
+
+    public List<ReplicaClient> GetHealthySecondaryReplicas(IReadOnlyDictionary<string, ServingStatus> healthStates)
+    {
+        return SecondaryReplicas
+            .Where(r => healthStates.TryGetValue(r.Address, out var status) && status == ServingStatus.Serving).ToList();
     }
 
     private ReplicaClient? GetHealthyPrimaryReplica(IReadOnlyDictionary<string, ServingStatus> healthStates)
@@ -31,18 +41,5 @@ public class Partition(PartitionConfiguration config)
         if (!hasPrimaryHealth || health != ServingStatus.Serving) return null;
 
         return PrimaryReplica;
-    }
-
-    private ReplicaClient? GetHealthySecondaryReplica(IReadOnlyDictionary<string, ServingStatus> healthStates)
-    {
-        var healthySecondaries = SecondaryReplicas
-            .Where(r => healthStates.TryGetValue(r.Address, out var status) && status == ServingStatus.Serving)
-            .ToList();
-
-        if (healthySecondaries.Count == 0) return null;
-
-        var rand = new Random();
-
-        return healthySecondaries[rand.Next(healthySecondaries.Count)];
     }
 }

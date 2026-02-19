@@ -129,8 +129,11 @@ public class RoutingService(
         var operationName = operationType == OperationType.Write ? "write" : "delete";
         var operationNamePast = operationType == OperationType.Write ? "wrote" : "deleted";
 
+        // TODO: implment catch up the the case of failure to avoid lost writes and missing reads from secondaries
+        var healthySecondaries = partition.GetHealthySecondaryReplicas(healthProbeService.HealthStates);
+
         int replicasCompleted = 0;
-        int replicasTotal = 1 + partition.SecondaryReplicas.Length;
+        int replicasTotal = 1 + healthySecondaries.Count;
         var warnings = new List<string>();
 
         TPrimaryResponse primaryResponse;
@@ -150,11 +153,11 @@ public class RoutingService(
             throw;
         }
 
-        var threshold = completedSecondaryWritesThreshold ?? partition.SecondaryReplicas.Length;
+        var threshold = completedSecondaryWritesThreshold ?? healthySecondaries.Count;
         var successfulSecondaries = 0;
         var secondaryTasksCompleted = 0;
 
-        var secondaryTasks = partition.SecondaryReplicas.Select(async (replica, index) =>
+        var secondaryTasks = healthySecondaries.Select(async (replica, index) =>
         {
             try
             {
