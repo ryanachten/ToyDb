@@ -4,8 +4,10 @@ using ToyDbContracts.Data;
 
 namespace ToyDbRouting.Clients;
 
+
 public class ReplicaClient
 {
+    public string Address { get; }
     private readonly Data.DataClient _dataClient;
 
     // Only used for tests, TODO: update to handle this warning properly
@@ -13,6 +15,7 @@ public class ReplicaClient
 
     public ReplicaClient(string dbAddress)
     {
+        Address = dbAddress;
         var handler = new HttpClientHandler
         {
             // TODO: this is a hack - investigate properly
