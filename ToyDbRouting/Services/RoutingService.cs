@@ -4,6 +4,7 @@ using Grpc.Core;
 using Microsoft.Extensions.Options;
 using System.IO.Hashing;
 using System.Text;
+using ToyDbContracts.Data;
 using ToyDbRouting.Clients;
 using ToyDbRouting.Extensions;
 using ToyDbRouting.Models;
@@ -16,7 +17,8 @@ public class RoutingService(
     IOptions<RoutingOptions> routingOptions,
     ILogger<RoutingService> logger,
     IMapper mapper,
-    INtpService ntpService
+    INtpService ntpService,
+    HealthProbeService healthProbeService
 ) : Routing.Routing.RoutingBase
 {
     private readonly Partition[] _partitions = routingOptions.Value.Partitions.Select(config => new Partition(config)).ToArray();
@@ -40,7 +42,7 @@ public class RoutingService(
     {
         var partition = GetPartition(request.Key);
 
-        var replica = partition.GetReadReplica();
+        var replica = partition.GetReadReplica(healthProbeService.HealthStates);
         var response = await replica.GetValue(request.Key);
 
         return mapper.Map<Routing.KeyValueResponse>(response);
@@ -50,18 +52,21 @@ public class RoutingService(
     {
         var allValues = new Routing.GetAllValuesResponse();
 
-        var partitionRequests = _partitions.Select(p => p.GetReadReplica().GetAllValues());
+        var partitionRequests = _partitions.Select(partition =>
+        {
+            var replica = partition.GetReadReplica(healthProbeService.HealthStates);
+            return replica?.GetAllValues() ?? Task.FromResult(new GetAllValuesResponse());
+        });
 
         await Task.WhenAll(partitionRequests);
 
         foreach (var partition in partitionRequests)
         {
-            if (partition.Result.Values == null) continue;
+            if (partition.Result == null || partition.Result.Values == null) continue;
 
             foreach (var value in partition.Result.Values)
             {
                 if (value == null) continue;
-
                 allValues.Values.Add(mapper.Map<Routing.KeyValueResponse>(value));
             }
         }
