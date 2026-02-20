@@ -25,7 +25,7 @@ public class Partition(PartitionConfiguration config)
         var healthyPrimary = GetHealthyPrimaryReplica(healthStates);
         if (healthyPrimary != null) return healthyPrimary;
 
-        throw new RpcException(new Status(StatusCode.Unavailable, $"Partition {config.PartitionId} has no healthy replcas for reads"));
+        throw new RpcException(new Status(StatusCode.Unavailable, $"Partition {config.PartitionId} has no healthy replicas for reads"));
     }
 
     public List<ReplicaClient> GetHealthySecondaryReplicas(IReadOnlyDictionary<string, ServingStatus> healthStates)
@@ -38,8 +38,9 @@ public class Partition(PartitionConfiguration config)
     {
         var hasPrimaryHealth = healthStates.TryGetValue(PrimaryReplica.Address, out var health);
 
-        if (!hasPrimaryHealth || health != ServingStatus.Serving) return null;
+        // Optimistically even if health check hasn't completed yet, assuming it will become healthy
+        if (!hasPrimaryHealth || health == ServingStatus.Serving) return PrimaryReplica;
 
-        return PrimaryReplica;
+        return null;
     }
 }
