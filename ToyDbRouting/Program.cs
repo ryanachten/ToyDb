@@ -11,21 +11,22 @@ builder.Services.AddGrpc();
 builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
 builder.Services.AddSingleton<HealthProbeService>();
 
-// gRPC has a watch capability for streaming healthchecks, I wonder if that should be used here
 builder.Services.AddHostedService(provider => provider.GetRequiredService<HealthProbeService>());
-builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
 
 var app = builder.Build();
 
 app.MapGrpcService<RoutingService>();
 
-app.MapGet("/diagnostics/health", (HealthProbeService healthProbeService) =>
+if (app.Environment.IsDevelopment())
 {
-    var statuses = healthProbeService.HealthStates
-        .OrderBy(kvp => kvp.Key)
-        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString());
+    app.MapGet("/diagnostics/health", (HealthProbeService healthProbeService) =>
+    {
+        var statuses = healthProbeService.HealthStates
+            .OrderBy(kvp => kvp.Key)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString());
 
-    return Results.Ok(statuses);
-});
+        return Results.Ok(statuses);
+    });
+}
 
 await app.RunAsync();

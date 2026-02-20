@@ -18,6 +18,12 @@ public class HealthProbeService : BackgroundService
     {
         _logger = logger;
         _routingOptions = routingOptions.Value;
+        
+        if (_routingOptions.HealthProbeIntervalSeconds <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(routingOptions), "HealthProbeIntervalSeconds must be greater than zero.");
+        }
+
         _probeInterval = TimeSpan.FromSeconds(_routingOptions.HealthProbeIntervalSeconds);
 
         var addresses = _routingOptions.Partitions
@@ -44,20 +50,23 @@ public class HealthProbeService : BackgroundService
         {
             foreach (var partition in _routingOptions.Partitions)
             {
-                await ProbeReplica(partition.PrimaryReplicaAddress);
+                await ProbeReplica(partition.PrimaryReplicaAddress, stoppingToken);
                 foreach (var secondary in partition.SecondaryReplicaAddresses)
-                    await ProbeReplica(secondary);
+                    await ProbeReplica(secondary, stoppingToken);
             }
             await Task.Delay(_probeInterval, stoppingToken);
         }
     }
 
-    private async Task ProbeReplica(string address)
+    private async Task ProbeReplica(string address, CancellationToken stoppingToken)
     {
         try
         {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+            timeoutCts.CancelAfter(_probeInterval);
+
             var healthClient = _healthClients[address];
-            var response = await healthClient.CheckAsync(new HealthCheckRequest());
+            var response = await healthClient.CheckAsync(new HealthCheckRequest(), cancellationToken: timeoutCts.Token);
             var status = response.Status;
             var previous = _healthStates.GetOrAdd(address, status);
             if (previous != status)
