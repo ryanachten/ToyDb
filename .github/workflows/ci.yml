@@ -41,12 +41,25 @@ jobs:
           for i in $(seq 1 30); do
             if curl -k -s -o /dev/null -w "%{http_code}" https://localhost:8081/diagnostics/health 2>/dev/null | grep -q "200"; then
               echo "Routing is ready"
-              exit 0
+              break
             fi
             echo "Waiting for routing... attempt $i/30"
             sleep 2
           done
-          echo "Routing did not become ready in time"
+          if ! curl -k -s -o /dev/null -w "%{http_code}" https://localhost:8081/diagnostics/health 2>/dev/null | grep -q "200"; then
+            echo "Routing did not become ready in time"
+            exit 1
+          fi
+          for i in $(seq 1 45); do
+            serving=$(curl -k -s https://localhost:8081/diagnostics/health 2>/dev/null | grep -o '"Serving"' | wc -l)
+            if [ "$serving" -ge 4 ]; then
+              echo "All 4 replicas are Serving"
+              exit 0
+            fi
+            echo "Waiting for replicas (Serving count: $serving/4)... attempt $i/45"
+            sleep 2
+          done
+          echo "Replicas did not become ready in time"
           exit 1
 
       - name: Run integration tests
