@@ -42,6 +42,11 @@ public class RoutingOptions
     /// Interval (in seconds) between health probes
     /// </summary>
     public int HealthProbeIntervalSeconds { get; set; } = 3;
+
+    /// <summary>
+    /// Dead-letter queue configuration for retrying failed secondary writes
+    /// </summary>
+    public DeadLetterOptions DeadLetterOptions { get; set; } = new();
 }
 
 public class RetryOptions

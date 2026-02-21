@@ -6,6 +6,7 @@ using System.IO.Hashing;
 using System.Text;
 using ToyDbContracts.Data;
 using ToyDbRouting.Clients;
+using ToyDbRouting.Constants;
 using ToyDbRouting.Extensions;
 using ToyDbRouting.Models;
 using Data = ToyDbContracts.Data;
@@ -18,17 +19,12 @@ public class RoutingService(
     ILogger<RoutingService> logger,
     IMapper mapper,
     INtpService ntpService,
-    HealthProbeService healthProbeService
+    HealthProbeService healthProbeService,
+    DeadLetterQueueService deadLetterQueueService
 ) : Routing.Routing.RoutingBase
 {
     private readonly Partition[] _partitions = routingOptions.Value.Partitions.Select(config => new Partition(config)).ToArray();
     private readonly int? completedSecondaryWritesThreshold = routingOptions.Value.CompletedSecondaryWritesThreshold;
-
-    internal enum OperationType
-    {
-        Write,
-        Delete
-    }
 
     internal record ReplicaExecutionResult<TPrimaryResponse>
     {
@@ -86,7 +82,7 @@ public class RoutingService(
             (replica, index) => replica.SetValue(dbRequest),
             partition,
             request.Key,
-            OperationType.Write);
+            WriteOperationType.Write);
 
         var response = mapper.Map<Routing.KeyValueResponse>(result.PrimaryResponse);
         response.ReplicasWritten = result.ReplicasCompleted;
@@ -111,7 +107,7 @@ public class RoutingService(
             (replica, index) => replica.DeleteValue(timestamp, request.Key),
             partition,
             request.Key,
-            OperationType.Delete);
+            WriteOperationType.Delete);
 
         return new Routing.DeleteResponse
         {
@@ -124,10 +120,10 @@ public class RoutingService(
         Func<ReplicaClient, int, Task> secondaryOperation,
         Partition partition,
         string key,
-        OperationType operationType)
+        WriteOperationType operationType)
     {
-        var operationName = operationType == OperationType.Write ? "write" : "delete";
-        var operationNamePast = operationType == OperationType.Write ? "wrote" : "deleted";
+        var operationName = operationType == WriteOperationType.Write ? "write" : "delete";
+        var operationNamePast = operationType == WriteOperationType.Write ? "wrote" : "deleted";
 
         // TODO: implment catch up the the case of failure to avoid lost writes and missing reads from secondaries
         var healthySecondaries = partition.GetHealthySecondaryReplicas(healthProbeService.HealthStates);
@@ -172,6 +168,17 @@ public class RoutingService(
             {
                 logger.LogWarning("Secondary replica[{Index}] {Operation} failed for key {Key}: {Error}",
                     index, operationName, key, ex.Message);
+
+                deadLetterQueueService.Enqueue(new FailedWrite
+                {
+                    Key = key,
+                    Replica = replica,
+                    PartitionId = partition.PrimaryReplica.Address,
+                    OperationType = operationType,
+                    Operation = secondaryOperation,
+                    FailedAt = DateTime.UtcNow
+                });
+
                 return (Index: index, Success: false);
             }
         }).ToList();
