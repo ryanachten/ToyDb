@@ -21,8 +21,8 @@ jobs:
       - name: Create certs directory
         run: mkdir -p certs
 
-      - name: Generate and trust HTTPS certificate
-        run: dotnet dev-certs https --trust -ep ./certs/aspnetapp.pfx -p password
+      - name: Generate HTTPS certificate
+        run: dotnet dev-certs https -ep ./certs/aspnetapp.pfx -p password
 
       - name: Restore
         run: dotnet restore ToyDb.sln
@@ -50,6 +50,8 @@ jobs:
           exit 1
 
       - name: Run integration tests
+        env:
+          TOYDB_SKIP_CERT_VALIDATION: "true"
         run: dotnet test ToyDbIntegrationTests/ToyDbIntegrationTests.csproj --no-build -c Release --verbosity normal
 
       - name: Docker Compose down

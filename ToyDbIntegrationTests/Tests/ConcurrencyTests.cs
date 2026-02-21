@@ -10,7 +10,7 @@ public class ConcurrencyTests
 
     public ConcurrencyTests()
     {
-        _client = new RoutingClient(RoutingAddress);
+        _client = new RoutingClient(RoutingAddress, IntegrationTestConfig.SkipCertificateValidation);
     }
 
     [Fact]
