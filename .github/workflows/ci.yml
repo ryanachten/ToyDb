@@ -22,7 +22,11 @@ jobs:
         run: mkdir -p certs
 
       - name: Generate HTTPS certificate
-        run: dotnet dev-certs https -ep ./certs/aspnetapp.pfx -p password
+        run: |
+          dotnet dev-certs https --clean 2>/dev/null || true
+          dotnet dev-certs https -ep ./certs/aspnetapp.pfx -p password
+          chmod 644 ./certs/aspnetapp.pfx
+          ls -la certs/
 
       - name: Restore
         run: dotnet restore ToyDb.sln
@@ -35,6 +39,14 @@ jobs:
 
       - name: Start Docker Compose
         run: docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --build
+
+      - name: Wait for containers and show diagnostics
+        run: |
+          sleep 20
+          docker compose -f docker-compose.yml -f docker-compose.override.yml ps -a
+          docker compose -f docker-compose.yml -f docker-compose.override.yml logs --tail=80
+          echo "Health response:"
+          curl -k -s https://localhost:8081/diagnostics/health || true
 
       - name: Wait for routing to be ready
         run: |
