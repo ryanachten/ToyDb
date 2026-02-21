@@ -14,7 +14,7 @@ public class BasicCrudTests
 
     public BasicCrudTests()
     {
-        _client = new RoutingClient(RoutingAddress);
+        _client = new RoutingClient(RoutingAddress, IntegrationTestConfig.SkipCertificateValidation);
     }
 
     [Fact]

@@ -1,4 +1,4 @@
-﻿using Grpc.Net.Client;
+using Grpc.Net.Client;
 using ToyDbClient.Services;
 using ToyDbContracts.Routing;
 
@@ -8,9 +8,21 @@ public class RoutingClient
 {
     private readonly Routing.RoutingClient _routingClient;
 
-    public RoutingClient(string routingAddress)
+    public RoutingClient(string routingAddress, bool skipCertificateValidation = false)
     {
-        var channel = GrpcChannel.ForAddress(routingAddress);
+        GrpcChannel channel;
+        if (skipCertificateValidation)
+        {
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            };
+            channel = GrpcChannel.ForAddress(routingAddress, new GrpcChannelOptions { HttpHandler = handler });
+        }
+        else
+        {
+            channel = GrpcChannel.ForAddress(routingAddress);
+        }
         _routingClient = new Routing.RoutingClient(channel);
     }
 

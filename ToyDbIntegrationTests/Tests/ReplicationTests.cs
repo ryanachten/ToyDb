@@ -20,7 +20,7 @@ public class ReplicationTests
 
     public ReplicationTests()
     {
-        _routingClient = new RoutingClient(RoutingAddress);
+        _routingClient = new RoutingClient(RoutingAddress, IntegrationTestConfig.SkipCertificateValidation);
         _p1r1Client = new ReplicaClient(P1R1Address);
         _p1r2Client = new ReplicaClient(P1R2Address);
         _p2r1Client = new ReplicaClient(P2R1Address);
