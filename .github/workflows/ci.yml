@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Create certs directory
+        run: mkdir -p certs
+
+      - name: Generate and trust HTTPS certificate
+        run: dotnet dev-certs https --trust -ep ./certs/aspnetapp.pfx -p password
+
+      - name: Restore
+        run: dotnet restore ToyDb.sln
+
+      - name: Build
+        run: dotnet build ToyDb.sln --no-restore -c Release
+
+      - name: Run unit tests
+        run: dotnet test ToyDbUnitTests/ToyDbUnitTests.csproj --no-build -c Release --verbosity normal
+
+      - name: Start Docker Compose
+        run: docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --build
+
+      - name: Wait for routing to be ready
+        run: |
+          for i in $(seq 1 30); do
+            if curl -k -s -o /dev/null -w "%{http_code}" https://localhost:8081/diagnostics/health 2>/dev/null | grep -q "200"; then
+              echo "Routing is ready"
+              exit 0
+            fi
+            echo "Waiting for routing... attempt $i/30"
+            sleep 2
+          done
+          echo "Routing did not become ready in time"
+          exit 1
+
+      - name: Run integration tests
+        run: dotnet test ToyDbIntegrationTests/ToyDbIntegrationTests.csproj --no-build -c Release --verbosity normal
+
+      - name: Docker Compose down
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.override.yml down
