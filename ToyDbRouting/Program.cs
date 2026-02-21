@@ -10,8 +10,10 @@ builder.Services.AddSingleton<INtpService, NtpService>();
 builder.Services.AddGrpc();
 builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
 builder.Services.AddSingleton<HealthProbeService>();
+builder.Services.AddSingleton<DeadLetterQueueService>();
 
 builder.Services.AddHostedService(provider => provider.GetRequiredService<HealthProbeService>());
+builder.Services.AddHostedService(provider => provider.GetRequiredService<DeadLetterQueueService>());
 
 var app = builder.Build();
 
