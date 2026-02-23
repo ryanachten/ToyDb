@@ -4,6 +4,7 @@
     - Flag any concerns with proposed design choices if you think they violate idiomatic database design principles
 
 ## Code conventions
+- DO NOT remove any **existing** comments unless instructed to do so (but do update them if they're outdated)
 - DO NOT add any comments unless explicitly instructed to do so
 - DO NOT update README files unless explicitly instructed to do so
 - Ensure dotnet format suggestions are addressed
