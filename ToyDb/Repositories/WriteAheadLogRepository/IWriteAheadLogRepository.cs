@@ -4,6 +4,7 @@ namespace ToyDb.Repositories.WriteAheadLogRepository;
 
 public interface IWriteAheadLogRepository
 {
-    long Append(string key, DatabaseEntry entry);
-    Dictionary<string, (DatabaseEntry, long)> GetLatestEntries();
+    long Append(long lsn, string key, DatabaseEntry entry, bool isDelete);
+    IEnumerable<WalEntry> ReadFrom(long fromLsn);
+    long GetLatestLsn();
 }

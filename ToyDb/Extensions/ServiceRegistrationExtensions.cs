@@ -29,6 +29,8 @@ public static class ServiceRegistrationExtensions
 
     private static void RegisterServices(this WebApplicationBuilder builder)
     {
+        builder.Services.AddSingleton<ILsnProvider, LsnProvider>();
+
         builder.Services.AddSingleton<IReadStorageService, ReadStorageService>();
 
         builder.Services.AddSingleton<IWriteStorageService, WriteStorageService>();

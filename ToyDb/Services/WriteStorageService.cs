@@ -12,6 +12,7 @@ namespace ToyDb.Services
         private readonly IKeyEntryCache _keyEntryCache;
         private readonly IDataStoreRepository _storeRepository;
         private readonly IWriteAheadLogRepository _walRepository;
+        private readonly ILsnProvider _lsnProvider;
         private readonly ILogger<WriteStorageService> _logger;
 
         /// <summary>
@@ -26,12 +27,14 @@ namespace ToyDb.Services
             IKeyEntryCache keyEntryCache,
             IDataStoreRepository storeRepository,
             IWriteAheadLogRepository walRepository,
+            ILsnProvider lsnProvider,
             ILogger<WriteStorageService> logger)
         {
             _keyOffsetCache = keyOffsetCache;
             _keyEntryCache = keyEntryCache;
             _storeRepository = storeRepository;
             _walRepository = walRepository;
+            _lsnProvider = lsnProvider;
             _logger = logger;
 
             Task.Run(() => PollWriteQueue());
@@ -58,7 +61,8 @@ namespace ToyDb.Services
 
         private void ExecuteSetValue(string key, DatabaseEntry value)
         {
-            _walRepository.Append(key, value);
+            var lsn = _lsnProvider.Next();
+            _walRepository.Append(lsn, key, value, isDelete: false);
             var offset = _storeRepository.Append(key, value);
 
             _keyOffsetCache.Set(key, offset);
@@ -71,8 +75,9 @@ namespace ToyDb.Services
             if (!_keyOffsetCache.TryGetValue(key, out long _)) return;
 
             var value = DatabaseEntry.Null(key);
+            var lsn = _lsnProvider.Next();
 
-            _walRepository.Append(key, value);
+            _walRepository.Append(lsn, key, value, isDelete: true);
             _storeRepository.Append(key, value);
 
             _keyOffsetCache.Remove(key);

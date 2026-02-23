@@ -48,6 +48,34 @@ public abstract class BaseLogRepository
     }
 
     /// <summary>
+    /// Appends LSN-prefixed database entry to log
+    /// </summary>
+    /// <param name="lsn">Log sequence number for the entry</param>
+    /// <param name="key">Key of the database entry</param>
+    /// <param name="entry">Database entry</param>
+    /// <param name="isDelete">Whether this entry represents a deletion</param>
+    /// <returns>The current offset for the entry</returns>
+    public long Append(long lsn, string key, DatabaseEntry entry, bool isDelete)
+    {
+        // We need to lock the file while we operate on it to ensure concurrent writes don't break offset references or overwrite data
+        using FileStream fileStream = new(logLocation, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
+
+        // Update stream pointer to end of the file and get offset
+        var currentOffset = fileStream.Seek(0, SeekOrigin.End);
+
+        using BinaryWriter binaryWriter = new(fileStream);
+
+        binaryWriter.Write(lsn);
+        binaryWriter.Write(entry.Timestamp.ToDateTime().ToBinary());
+        binaryWriter.Write(key);
+        binaryWriter.Write(entry.Type.ToString());
+        binaryWriter.Write(entry.Data?.ToBase64() ?? NullMarker.ToBase64());
+        binaryWriter.Write(isDelete);
+
+        return currentOffset;
+    }
+
+    /// <summary>
     /// Reads all entries present in log file, only returning the latest values
     /// </summary>
     /// <returns>Dictionary with entry key assigned to tuple of entry and log offset</returns>
@@ -102,6 +130,32 @@ public abstract class BaseLogRepository
         var timestamp = Timestamp.FromDateTime(DateTime.FromBinary(rawTimeStamp));
 
         return new DatabaseEntry() { Timestamp = timestamp, Key = key, Type = dataType, Data = ByteString.FromBase64(data) };
+    }
+
+    protected static WalEntry ReadWalEntry(BinaryReader binaryReader)
+    {
+        var lsn = binaryReader.ReadInt64();
+        var rawTimeStamp = binaryReader.ReadInt64();
+        var key = binaryReader.ReadString();
+        var rawDataType = binaryReader.ReadString();
+        var data = binaryReader.ReadString();
+        var isDelete = binaryReader.ReadBoolean();
+
+        var hasValidDataType = Enum.TryParse(rawDataType, out DataType dataType);
+        if (!hasValidDataType)
+            throw new InvalidDataException($"Data type is not valid. Received {rawDataType}");
+
+        var timestamp = Timestamp.FromDateTime(DateTime.FromBinary(rawTimeStamp));
+
+        return new WalEntry
+        {
+            Lsn = lsn,
+            Timestamp = timestamp,
+            Key = key,
+            Type = dataType,
+            Data = ByteString.FromBase64(data),
+            IsDelete = isDelete
+        };
     }
 
     private void GetLatestLogFilePath()
