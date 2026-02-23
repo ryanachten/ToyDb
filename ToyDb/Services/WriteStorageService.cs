@@ -63,7 +63,7 @@ namespace ToyDb.Services
         {
             var lsn = _lsnProvider.Next();
             _walRepository.Append(lsn, key, value, isDelete: false);
-            var offset = _storeRepository.Append(key, value);
+            var offset = _storeRepository.Append(lsn, key, value, isDelete: false);
 
             _keyOffsetCache.Set(key, offset);
             _keyEntryCache.Set(key, value);
@@ -78,7 +78,7 @@ namespace ToyDb.Services
             var lsn = _lsnProvider.Next();
 
             _walRepository.Append(lsn, key, value, isDelete: true);
-            _storeRepository.Append(key, value);
+            _storeRepository.Append(lsn, key, value, isDelete: true);
 
             _keyOffsetCache.Remove(key);
             _keyEntryCache.Remove(key);
@@ -88,7 +88,7 @@ namespace ToyDb.Services
         {
             if (!_storeRepository.HasRedundantData()) return;
 
-            var entities = _storeRepository.GetLatestEntries().Select(x => x.Value.Item1);
+            var entities = _storeRepository.GetLatestWalEntries().Select(x => x.Value.Item1);
 
             _storeRepository.CreateNewLogFile();
 

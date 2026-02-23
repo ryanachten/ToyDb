@@ -18,10 +18,102 @@ namespace ToyDb.Repositories.DataStoreRepository
 
             // Update stream pointer to offset before we attempt to read the entry
             fileStream.Seek(offset, SeekOrigin.Begin);
-
             using BinaryReader binaryReader = new(fileStream);
 
-            return ReadEntry(binaryReader);
+            var walEntry = ReadWalEntry(binaryReader);
+
+            return new DatabaseEntry
+            {
+                Timestamp = walEntry.Timestamp,
+                Key = walEntry.Key,
+                Type = walEntry.Type,
+                Data = walEntry.Data
+            };
+        }
+
+        /// <summary>
+        /// Reads all entries present in log file, only returning the latest values as database entries
+        /// </summary>
+        /// <returns>Dictionary with entry key assigned to tuple of entry and log offset</returns>
+        public new Dictionary<string, (DatabaseEntry, long)> GetLatestEntries()
+        {
+            using FileStream fileStream = new(logLocation, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using BinaryReader binaryReader = new(fileStream);
+
+            var entries = new Dictionary<string, (DatabaseEntry, long)>();
+
+            while (fileStream.Position < fileStream.Length)
+            {
+                var offset = fileStream.Position;
+                var walEntry = ReadWalEntry(binaryReader);
+
+                if (walEntry.IsDelete)
+                {
+                    entries.Remove(walEntry.Key);
+                    continue;
+                }
+
+                var entry = new DatabaseEntry
+                {
+                    Timestamp = walEntry.Timestamp,
+                    Key = walEntry.Key,
+                    Type = walEntry.Type,
+                    Data = walEntry.Data
+                };
+
+                entries[walEntry.Key] = (entry, offset);
+            }
+
+            return entries;
+        }
+
+        /// <summary>
+        /// Reads all entries present in log file, only returning the latest values as WAL entries with LSN metadata
+        /// </summary>
+        /// <returns>Dictionary with entry key assigned to tuple of WAL entry and log offset</returns>
+        public Dictionary<string, (WalEntry, long)> GetLatestWalEntries()
+        {
+            using FileStream fileStream = new(logLocation, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using BinaryReader binaryReader = new(fileStream);
+
+            var entries = new Dictionary<string, (WalEntry, long)>();
+
+            while (fileStream.Position < fileStream.Length)
+            {
+                var offset = fileStream.Position;
+                var walEntry = ReadWalEntry(binaryReader);
+
+                if (walEntry.IsDelete)
+                {
+                    entries.Remove(walEntry.Key);
+                    continue;
+                }
+
+                entries[walEntry.Key] = (walEntry, offset);
+            }
+
+            return entries;
+        }
+
+        /// <summary>
+        /// Scans the data store to find the highest persisted LSN
+        /// </summary>
+        /// <returns>The highest LSN found in the data store, or 0 if empty</returns>
+        public long GetLatestLsn()
+        {
+            using FileStream fileStream = new(logLocation, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using BinaryReader binaryReader = new(fileStream);
+
+            long latestLsn = 0;
+
+            while (fileStream.Position < fileStream.Length)
+            {
+                var walEntry = ReadWalEntry(binaryReader);
+                if (walEntry.Lsn > latestLsn)
+                    latestLsn = walEntry.Lsn;
+            }
+
+            return latestLsn;
         }
 
         /// <summary>
@@ -37,11 +129,11 @@ namespace ToyDb.Repositories.DataStoreRepository
 
             while (fileStream.Position < fileStream.Length)
             {
-                var entry = ReadEntry(binaryReader);
-                
-                if (keys.Contains(entry.Key) || NullMarker.Equals(entry.Data)) return true;
+                var walEntry = ReadWalEntry(binaryReader);
 
-                keys.Add(entry.Key);
+                if (walEntry.IsDelete || keys.Contains(walEntry.Key)) return true;
+
+                keys.Add(walEntry.Key);
             }
 
             return false;
@@ -52,7 +144,7 @@ namespace ToyDb.Repositories.DataStoreRepository
         /// </summary>
         /// <param name="entries">Entities to be added</param>
         /// <returns>Key - offset index</returns>
-        public Dictionary<string, long> AppendRange(IEnumerable<DatabaseEntry> entries)
+        public Dictionary<string, long> AppendRange(IEnumerable<WalEntry> entries)
         {
             // We need to lock the file while we operate on it to ensure concurrent writes don't break offset references or overwrite data
             using FileStream fileStream = new(logLocation, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
@@ -68,11 +160,14 @@ namespace ToyDb.Repositories.DataStoreRepository
             {
                 var currentOffset = fileStream.Position;
 
+                binaryWriter.Write(entry.Lsn);
+                binaryWriter.Write(entry.Timestamp.ToDateTime().ToBinary());
                 binaryWriter.Write(entry.Key);
                 binaryWriter.Write(entry.Type.ToString());
-                binaryWriter.Write(entry.Data.ToBase64());
+                binaryWriter.Write(entry.Data?.ToBase64() ?? NullMarker.ToBase64());
+                binaryWriter.Write(entry.IsDelete);
 
-                index.Add(entry.Key, currentOffset);
+                index[entry.Key] = currentOffset;
             }
 
             return index;
