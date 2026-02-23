@@ -1,5 +1,7 @@
 ## Guiding princples
 - Optimise for performance while maintaining readability
+- Align with idiomatic database design principles.
+    - Flag any concerns with proposed design choices if you think they violate idiomatic database design principles
 
 ## Code conventions
 - DO NOT add any comments unless explicitly instructed to do so

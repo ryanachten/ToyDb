@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Options;
@@ -124,7 +124,6 @@ public class RoutingService(
         var operationName = operationType == WriteOperationType.Write ? "write" : "delete";
         var operationNamePast = operationType == WriteOperationType.Write ? "wrote" : "deleted";
 
-        // TODO: implment catch up the the case of failure to avoid lost writes and missing reads from secondaries
         var healthySecondaries = partition.GetHealthySecondaryReplicas(healthProbeService.HealthStates);
 
         int replicasCompleted = 0;
