@@ -2,7 +2,51 @@
 
 Toy database for learning the fundamentals on database implementation and data management.
 
-## Project structure
+## Architecture
+
+```mermaid
+graph TD
+    Client["ToyDbClient (CLI)"]
+
+    subgraph Routing["ToyDbRouting"]
+        RS[RoutingService]
+        HP[HealthProbeService]
+        DLQ[DeadLetterQueueService]
+    end
+
+    subgraph P1["Partition 1"]
+        P1R1["Primary Replica (p1-r1)"]
+        P1R2["Secondary Replica (p1-r2)"]
+    end
+
+    subgraph P2["Partition 2"]
+        P2R1["Primary Replica (p2-r1)"]
+        P2R2["Secondary Replica (p2-r2)"]
+    end
+
+    subgraph Node["ToyDb Node (per replica)"]
+        CS[ClientService]
+        WS[WriteStorageService]
+        ReadS[ReadStorageService]
+        WAL[Write-Ahead Log]
+        AOL[Append-only Log]
+        LC[Log Compaction]
+    end
+
+    Client -- "gRPC (Protobuf)" --> RS
+    RS -- "hash-based<br/>partitioning" --> P1
+    RS -- "hash-based<br/>partitioning" --> P2
+    HP -. "health checks" .-> P1R1 & P1R2 & P2R1 & P2R2
+    DLQ -. "retry failed writes" .-> P1 & P2
+
+    P1R1 -- "replication" --> P1R2
+    P2R1 -- "replication" --> P2R2
+
+    CS --> WS & ReadS
+    WS --> WAL & AOL
+    ReadS --> AOL
+    LC -. "compaction" .-> AOL
+```
 
 The database is currently a simple key-value store which receives commands using gRPC.
 
