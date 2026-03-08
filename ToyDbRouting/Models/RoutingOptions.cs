@@ -44,6 +44,11 @@ public class RoutingOptions
     public int HealthProbeIntervalSeconds { get; set; } = 3;
 
     /// <summary>
+    /// Number of virtual nodes per partition for consistent hashing
+    /// </summary>
+    public int VirtualNodesPerPartition { get; set; } = 200;
+
+    /// <summary>
     /// Dead-letter queue configuration for retrying failed secondary writes
     /// </summary>
     public DeadLetterOptions DeadLetterOptions { get; set; } = new();

@@ -8,6 +8,8 @@
     - Don't use: `logger.LogInformation($"Health status changed for {address}: {previous} -> {status}");`
     - Do use: `logger.LogInformation("Health status changed for {Address}: {Previous} -> {Status}", address, previous, status);`
 - Ensure the architecture diagram in the [README](./README.md) is updated when making changes to the architecture
+- Use collection instantiation where possible
+- Ensure dotnet format suggestions are addressed
 
 ## Tests
 - Always ensure tests pass when making changes
