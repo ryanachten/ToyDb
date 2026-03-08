@@ -1,8 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
 using ToyDb.Caches;
-using ToyDb.Extensions;
 using ToyDb.Models;
 using ToyDb.Repositories.DataStoreRepository;
+using ToyDb.Repositories.WriteAheadLogRepository;
 
 namespace ToyDb.Services;
 
@@ -11,20 +10,26 @@ public class ReadStorageService : IReadStorageService
     private readonly IKeyOffsetCache _keyOffsetCache;
     private readonly IKeyEntryCache _keyEntryCache;
     private readonly IDataStoreRepository _storeRepository;
+    private readonly IWriteAheadLogRepository _walRepository;
+    private readonly WalRecoveryService _walRecoveryService;
     private readonly ILogger<ReadStorageService> _logger;
 
     public ReadStorageService(
         IKeyOffsetCache keyOffsetCache,
         IKeyEntryCache keyEntryCache,
         IDataStoreRepository storeRepository,
+        IWriteAheadLogRepository walRepository,
+        WalRecoveryService walRecoveryService,
         ILogger<ReadStorageService> logger)
     {
         _keyOffsetCache = keyOffsetCache;
         _keyEntryCache = keyEntryCache;
         _storeRepository = storeRepository;
+        _walRepository = walRepository;
+        _walRecoveryService = walRecoveryService;
         _logger = logger;
 
-        RestoreIndexFromStore();
+        RecoverFromWal();
     }
 
     public DatabaseEntry GetValue(string key)
@@ -52,17 +57,7 @@ public class ReadStorageService : IReadStorageService
     }
 
     /// <summary>
-    /// Restores database index from data store
+    /// Recovers database state by replaying WAL entries that haven't been applied to the data store
     /// </summary>
-    private void RestoreIndexFromStore()
-    {
-        var timer = _logger.StartTimedLog(nameof(RestoreIndexFromStore));
-
-        var entries = _storeRepository.GetLatestEntries();
-
-        var updatedIndex = entries.ToDictionary(x => x.Key, x => x.Value.Item2);
-        _keyOffsetCache.Replace(updatedIndex);
-
-        timer.Stop();
-    }
+    private void RecoverFromWal() => _walRecoveryService.Recover();
 }

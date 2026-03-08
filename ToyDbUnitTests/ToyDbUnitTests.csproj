@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\ToyDb\ToyDb.csproj" />
     <ProjectReference Include="..\ToyDbClient\ToyDbClient.csproj" />
     <ProjectReference Include="..\ToyDbContracts\ToyDbContracts.csproj" />
     <ProjectReference Include="..\ToyDbRouting\ToyDbRouting.csproj" />

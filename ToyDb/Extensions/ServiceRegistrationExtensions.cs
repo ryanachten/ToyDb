@@ -1,4 +1,4 @@
-﻿using ToyDb.Caches;
+using ToyDb.Caches;
 using ToyDb.Repositories.DataStoreRepository;
 using ToyDb.Repositories.WriteAheadLogRepository;
 using ToyDb.Services;
@@ -32,6 +32,8 @@ public static class ServiceRegistrationExtensions
         builder.Services.AddSingleton<ILsnProvider, LsnProvider>();
 
         builder.Services.AddSingleton<IReplicationLogNotifier, ReplicationLogNotifier>();
+
+        builder.Services.AddSingleton<WalRecoveryService>();
 
         builder.Services.AddSingleton<IReadStorageService, ReadStorageService>();
 
