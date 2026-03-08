@@ -2,8 +2,6 @@ using AutoMapper;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Options;
-using System.IO.Hashing;
-using System.Text;
 using ToyDbContracts.Data;
 using ToyDbRouting.Clients;
 using ToyDbRouting.Constants;
