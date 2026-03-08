@@ -1,4 +1,5 @@
 using Google.Protobuf.WellKnownTypes;
+using Grpc.Core;
 using Grpc.Net.Client;
 using ToyDbContracts.Data;
 using System.Runtime.CompilerServices;
@@ -58,9 +59,24 @@ public class ReplicaClient
     {
         var request = new StreamReplicationLogRequest { FromLsn = fromLsn };
         using var call = _dataClient.StreamReplicationLog(request, cancellationToken: cancellationToken);
-        
-        while (await call.ResponseStream.MoveNext(cancellationToken))
+
+        while (true)
         {
+            bool hasNext;
+            try
+            {
+                hasNext = await call.ResponseStream.MoveNext(cancellationToken);
+            }
+            catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
+            {
+                yield break;
+            }
+            catch (OperationCanceledException)
+            {
+                yield break;
+            }
+
+            if (!hasNext) break;
             yield return call.ResponseStream.Current;
         }
     }

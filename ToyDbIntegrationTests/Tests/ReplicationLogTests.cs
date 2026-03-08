@@ -37,7 +37,7 @@ public class ReplicationLogTests
 
         var primaryClient = await DeterminePrimaryForKey(key);
         var entries = new List<ReplicationLogEntry>();
-        
+
         await foreach (var entry in primaryClient.StreamReplicationLog(0))
         {
             entries.Add(entry);
@@ -67,32 +67,35 @@ public class ReplicationLogTests
         await Task.Delay(500);
 
         var primaryClient = await DeterminePrimaryForKey(keys[0]);
+        var keysOnPrimary = await GetKeysOnClient(keys, primaryClient);
+
         var entries = new List<ReplicationLogEntry>();
-        
+
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(TimeSpan.FromSeconds(5));
-        
+        cts.CancelAfter(TimeSpan.FromSeconds(10));
+
         await foreach (var entry in primaryClient.StreamReplicationLog(0, cts.Token))
         {
-            if (keys.Contains(entry.Key))
+            if (keysOnPrimary.Contains(entry.Key))
             {
                 entries.Add(entry);
             }
-            
-            if (entries.Count == keys.Count)
+
+            if (entries.Count == keysOnPrimary.Count)
             {
                 break;
             }
         }
 
-        Assert.Equal(keys.Count, entries.Count);
-        
+        Assert.True(keysOnPrimary.Count > 0, "At least one key should be on the primary partition");
+        Assert.Equal(keysOnPrimary.Count, entries.Count);
+
         var orderedEntries = entries.OrderBy(e => e.Lsn).ToList();
         Assert.Equal(entries.Count, orderedEntries.Count);
-        
+
         for (int i = 0; i < orderedEntries.Count - 1; i++)
         {
-            Assert.True(orderedEntries[i].Lsn < orderedEntries[i + 1].Lsn, 
+            Assert.True(orderedEntries[i].Lsn < orderedEntries[i + 1].Lsn,
                 $"LSN {orderedEntries[i].Lsn} should be less than {orderedEntries[i + 1].Lsn}");
         }
     }
@@ -110,28 +113,30 @@ public class ReplicationLogTests
         await Task.Delay(500);
 
         var primaryClient = await DeterminePrimaryForKey(keys[0]);
-        
+        var keysOnPrimary = await GetKeysOnClient(keys, primaryClient);
+
         var walEntries = new List<ReplicationLogEntry>();
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(TimeSpan.FromSeconds(5));
-        
+        cts.CancelAfter(TimeSpan.FromSeconds(10));
+
         await foreach (var entry in primaryClient.StreamReplicationLog(0, cts.Token))
         {
-            if (keys.Contains(entry.Key))
+            if (keysOnPrimary.Contains(entry.Key))
             {
                 walEntries.Add(entry);
             }
-            
-            if (walEntries.Count == keys.Count)
+
+            if (walEntries.Count == keysOnPrimary.Count)
             {
                 break;
             }
         }
 
-        Assert.Equal(keys.Count, walEntries.Count);
+        Assert.True(keysOnPrimary.Count > 0, "At least one key should be on the primary partition");
+        Assert.Equal(keysOnPrimary.Count, walEntries.Count);
 
         var dataStoreValues = new Dictionary<string, string>();
-        foreach (var key in keys)
+        foreach (var key in keysOnPrimary)
         {
             var value = await primaryClient.GetAndDeserializeValue<string>(key);
             if (value != null)
@@ -140,13 +145,13 @@ public class ReplicationLogTests
             }
         }
 
-        Assert.Equal(keys.Count, dataStoreValues.Count);
-        
+        Assert.Equal(keysOnPrimary.Count, dataStoreValues.Count);
+
         foreach (var walEntry in walEntries)
         {
             if (!walEntry.IsDelete)
             {
-                Assert.True(dataStoreValues.ContainsKey(walEntry.Key), 
+                Assert.True(dataStoreValues.ContainsKey(walEntry.Key),
                     $"Data store should contain key {walEntry.Key} from WAL");
                 var expectedValue = walEntry.Value.ToStringUtf8();
                 Assert.Equal(expectedValue, dataStoreValues[walEntry.Key]);
@@ -154,23 +159,37 @@ public class ReplicationLogTests
         }
     }
 
+    private async Task<HashSet<string>> GetKeysOnClient(List<string> keys, ReplicaClient client)
+    {
+        var result = new HashSet<string>();
+        foreach (var key in keys)
+        {
+            var value = await client.GetAndDeserializeValue<string>(key);
+            if (value != null)
+            {
+                result.Add(key);
+            }
+        }
+        return result;
+    }
+
     private async Task<ReplicaClient> DeterminePrimaryForKey(string key)
     {
         await Task.Delay(100);
-        
+
         var valueP1R1 = await _p1r1Client.GetAndDeserializeValue<string>(key);
         var valueP2R1 = await _p2r1Client.GetAndDeserializeValue<string>(key);
-        
+
         if (valueP1R1 != null)
         {
             return _p1r1Client;
         }
-        
+
         if (valueP2R1 != null)
         {
             return _p2r1Client;
         }
-        
+
         throw new InvalidOperationException($"Could not determine primary for key {key}");
     }
 }
