@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using Google.Protobuf.WellKnownTypes;
 using ToyDb.Caches;
 using ToyDb.Models;
 using ToyDb.Repositories.DataStoreRepository;
@@ -75,7 +74,7 @@ namespace ToyDb.Services
             _replicationLogNotifier.Publish(new WalEntry
             {
                 Lsn = lsn,
-                Timestamp = Timestamp.FromDateTime(DateTime.UtcNow),
+                Timestamp = value.Timestamp,
                 Key = key,
                 Type = value.Type,
                 Data = value.Data,
@@ -100,7 +99,7 @@ namespace ToyDb.Services
             _replicationLogNotifier.Publish(new WalEntry
             {
                 Lsn = lsn,
-                Timestamp = Timestamp.FromDateTime(DateTime.UtcNow),
+                Timestamp = value.Timestamp,
                 Key = key,
                 Type = value.Type,
                 Data = value.Data,

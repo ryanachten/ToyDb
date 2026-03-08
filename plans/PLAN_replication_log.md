@@ -52,7 +52,7 @@ This is the foundation for secondary catch-up (Phase 2, Item 5) and improved rea
 
 The WAL entry format is extended to include the LSN and an explicit delete flag:
 
-```
+```text
 WAL Entry (new format)
 ├── Lsn        : long
 ├── Timestamp  : google.protobuf.Timestamp (int64 binary)
@@ -66,14 +66,14 @@ WAL Entry (new format)
 
 The write path changes from the current (non-write-ahead) order:
 
-```
+```text
 Current:  WAL.Append → DataStore.Append → Cache updates
           (WAL and DataStore written together — not true write-ahead)
 ```
 
 To true write-ahead ordering:
 
-```
+```text
 New:  LSN = LsnProvider.Next()
       WAL.Append (with LSN)  ← durable first
       DataStore.Append       ← applied second
@@ -106,12 +106,12 @@ To support crash recovery, the data store must track the LSN of the last applied
 
 `IWriteAheadLogRepository` is extended with new methods:
 
-- `AppendWithLsn(long lsn, string key, DatabaseEntry entry, bool isDelete)` — writes the LSN-prefixed entry.
+- `Append(long lsn, string key, DatabaseEntry entry, bool isDelete)` — writes the LSN-prefixed entry.
 - `IEnumerable<WalEntry> ReadFrom(long fromLsn)` — returns all entries with LSN ≥ `fromLsn`, in order.
 - `long GetLatestLsn()` — reads the tail of the WAL to find the highest persisted LSN.
 - `void TruncateBefore(long lsn)` — removes entries with LSN < `lsn` (used after checkpointing + secondary ACK, future enhancement).
 
-The existing `Append` and `GetLatestEntries` methods are deprecated and replaced.
+The legacy `Append(string key, DatabaseEntry entry)` (without LSN) remains for use by compaction; all new writes use the LSN-prefixed overload.
 
 ### 2.7 gRPC Streaming Endpoint
 
@@ -190,14 +190,14 @@ Until then, the WAL grows unbounded — the same behaviour as today, but now wit
 | Item | Detail |
 |---|---|
 | **Modified files** | `ToyDb/Repositories/WriteAheadLogRepository/IWriteAheadLogRepository.cs`, `WriteAheadLogRepository.cs` |
-| **Changes** | Replace `Append` with `AppendWithLsn`. Add `ReadFrom(long fromLsn)` and `GetLatestLsn()` methods. Remove the old `Append` and `GetLatestEntries` methods. The `ReadFrom` implementation scans the WAL file sequentially, yielding entries with LSN ≥ the requested value. |
+| **Changes** | Add `Append(long lsn, ...)` overload alongside the existing `Append`. Add `ReadFrom(long fromLsn)` and `GetLatestLsn()` methods. The `ReadFrom` implementation scans the WAL file sequentially, yielding entries with LSN ≥ the requested value. |
 
 ### Step 5 — Upgrade data store to include LSN
 
 | Item | Detail |
 |---|---|
 | **Modified files** | `ToyDb/Repositories/DataStoreRepository/IDataStoreRepository.cs`, `DataStoreRepository.cs` |
-| **Changes** | Add `AppendWithLsn` method and `GetLatestLsn()`. Data store entries now include the LSN field so the checkpoint boundary can be determined on startup. `AppendRange` (used by compaction) is updated to preserve LSNs. |
+| **Changes** | Add `Append(long lsn, ...)` overload and `GetLatestLsn()`. Data store entries now include the LSN field so the checkpoint boundary can be determined on startup. `AppendRange` (used by compaction) is updated to preserve LSNs. |
 
 ### Step 6 — `ReplicationLogNotifier`
 
@@ -212,7 +212,7 @@ Until then, the WAL grows unbounded — the same behaviour as today, but now wit
 | Item | Detail |
 |---|---|
 | **Modified file** | `ToyDb/Services/WriteStorageService.cs` |
-| **Changes** | Inject `ILsnProvider` and `IReplicationLogNotifier`. Reorder `ExecuteSetValue` and `ExecuteDeleteValue` to write WAL **first** (true write-ahead), then data store, then caches, then notify. Use `AppendWithLsn` for both WAL and data store writes. |
+| **Changes** | Inject `ILsnProvider` and `IReplicationLogNotifier`. Reorder `ExecuteSetValue` and `ExecuteDeleteValue` to write WAL **first** (true write-ahead), then data store, then caches, then notify. Use the LSN-prefixed `Append(long lsn, ...)` overload for both WAL and data store writes. |
 | **Interface** | `IWriteStorageService` unchanged — LSN assignment is an internal concern. |
 
 ### Step 8 — Implement crash recovery
@@ -264,7 +264,7 @@ Test naming follows `GivenX_WhenY_ThenZ` convention per project standards.
 
 ## 4. Binary Format — WAL Entry (Updated)
 
-```
+```text
 ┌──────────┬──────────────┬────────────┬──────────┬──────────┬──────────┐
 │ LSN      │ Timestamp    │ Key        │ DataType │ Data     │ IsDelete │
 │ (int64)  │ (int64)      │ (string)   │ (string) │ (string) │ (bool)   │

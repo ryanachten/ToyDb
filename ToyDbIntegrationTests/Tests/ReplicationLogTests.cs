@@ -90,13 +90,10 @@ public class ReplicationLogTests
         Assert.True(keysOnPrimary.Count > 0, "At least one key should be on the primary partition");
         Assert.Equal(keysOnPrimary.Count, entries.Count);
 
-        var orderedEntries = entries.OrderBy(e => e.Lsn).ToList();
-        Assert.Equal(entries.Count, orderedEntries.Count);
-
-        for (int i = 0; i < orderedEntries.Count - 1; i++)
+        for (int i = 0; i < entries.Count - 1; i++)
         {
-            Assert.True(orderedEntries[i].Lsn < orderedEntries[i + 1].Lsn,
-                $"LSN {orderedEntries[i].Lsn} should be less than {orderedEntries[i + 1].Lsn}");
+            Assert.True(entries[i].Lsn < entries[i + 1].Lsn,
+                $"LSN {entries[i].Lsn} should be less than {entries[i + 1].Lsn}");
         }
     }
 
