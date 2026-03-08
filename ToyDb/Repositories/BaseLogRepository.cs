@@ -72,6 +72,9 @@ public abstract class BaseLogRepository
         binaryWriter.Write(entry.Data?.ToBase64() ?? NullMarker.ToBase64());
         binaryWriter.Write(isDelete);
 
+        binaryWriter.Flush();
+        fileStream.Flush(true);
+
         return currentOffset;
     }
 

@@ -63,9 +63,7 @@ public class LsnProviderTests
             .Select(_ => Task.Run(() => provider.Next()))
             .ToArray();
 
-        await Task.WhenAll(tasks);
-
-        var lsns = tasks.Select(t => t.Result).ToList();
+        var lsns = (await Task.WhenAll(tasks)).ToList();
         var uniqueLsns = lsns.Distinct().ToList();
 
         Assert.Equal(100, uniqueLsns.Count);
