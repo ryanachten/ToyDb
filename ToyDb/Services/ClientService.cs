@@ -1,5 +1,7 @@
-﻿using Grpc.Core;
+using Grpc.Core;
+using Google.Protobuf.WellKnownTypes;
 using ToyDb.Extensions;
+using ToyDb.Repositories.WriteAheadLogRepository;
 using ToyDbContracts.Data;
 using ToyDb.Models;
 
@@ -11,6 +13,8 @@ namespace ToyDb.Services;
 public class ClientService(
     IReadStorageService readStorageService,
     IWriteStorageService writeStorageService,
+    IWriteAheadLogRepository walRepository,
+    IReplicationLogNotifier replicationLogNotifier,
     ILogger<ClientService> logger
 ) : Data.DataBase
 {
@@ -83,5 +87,62 @@ public class ClientService(
         timer.Stop();
 
         return new DeleteResponse();
+    }
+
+    public override async Task StreamReplicationLog(StreamReplicationLogRequest request, IServerStreamWriter<ReplicationLogEntry> responseStream, ServerCallContext context)
+    {
+        try
+        {
+            var lastSentLsn = request.FromLsn - 1;
+
+            var persistedEntries = walRepository.ReadFrom(request.FromLsn);
+            foreach (var walEntry in persistedEntries)
+            {
+                if (context.CancellationToken.IsCancellationRequested)
+                    break;
+
+                var replicationEntry = new ReplicationLogEntry
+                {
+                    Lsn = walEntry.Lsn,
+                    Timestamp = walEntry.Timestamp,
+                    Key = walEntry.Key,
+                    Type = walEntry.Type,
+                    Value = walEntry.Data ?? Google.Protobuf.ByteString.Empty,
+                    IsDelete = walEntry.IsDelete
+                };
+
+                await responseStream.WriteAsync(replicationEntry);
+                lastSentLsn = walEntry.Lsn;
+            }
+
+            await foreach (var walEntry in replicationLogNotifier.ReadAllAsync(context.CancellationToken))
+            {
+                // Skip entries that have already been sent
+                if (walEntry.Lsn <= lastSentLsn)
+                    continue;
+
+                var replicationEntry = new ReplicationLogEntry
+                {
+                    Lsn = walEntry.Lsn,
+                    Timestamp = walEntry.Timestamp,
+                    Key = walEntry.Key,
+                    Type = walEntry.Type,
+                    Value = walEntry.Data ?? Google.Protobuf.ByteString.Empty,
+                    IsDelete = walEntry.IsDelete
+                };
+
+                await responseStream.WriteAsync(replicationEntry);
+                lastSentLsn = walEntry.Lsn;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogInformation("StreamReplicationLog cancelled");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error in StreamReplicationLog");
+            throw;
+        }
     }
 }
