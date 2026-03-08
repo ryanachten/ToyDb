@@ -6,6 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<RoutingOptions>(builder.Configuration.GetSection(RoutingOptions.Key));
 builder.Services.AddSingleton<INtpService, NtpService>();
+builder.Services.AddSingleton<ConsistentHashRing>();
 
 builder.Services.AddGrpc();
 builder.Services.AddAutoMapper(typeof(AutoMapperProfile));

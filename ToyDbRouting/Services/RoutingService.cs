@@ -20,10 +20,11 @@ public class RoutingService(
     IMapper mapper,
     INtpService ntpService,
     HealthProbeService healthProbeService,
-    DeadLetterQueueService deadLetterQueueService
+    DeadLetterQueueService deadLetterQueueService,
+    ConsistentHashRing ring
 ) : Routing.Routing.RoutingBase
 {
-    private readonly Partition[] _partitions = routingOptions.Value.Partitions.Select(config => new Partition(config)).ToArray();
+    private readonly ConsistentHashRing _ring = ring;
     private readonly int? completedSecondaryWritesThreshold = routingOptions.Value.CompletedSecondaryWritesThreshold;
 
     internal record ReplicaExecutionResult<TPrimaryResponse>
@@ -36,7 +37,7 @@ public class RoutingService(
 
     public override async Task<Routing.KeyValueResponse> GetValue(Routing.GetRequest request, ServerCallContext context)
     {
-        var partition = GetPartition(request.Key);
+        var partition = _ring.GetPartition(request.Key);
 
         var replica = partition.GetReadReplica(healthProbeService.HealthStates);
         var response = await replica.GetValue(request.Key);
@@ -48,11 +49,11 @@ public class RoutingService(
     {
         var allValues = new Routing.GetAllValuesResponse();
 
-        var partitionRequests = _partitions.Select(partition =>
+        var partitionRequests = _ring.Partitions.Select(partition =>
         {
             var replica = partition.GetReadReplica(healthProbeService.HealthStates);
             return replica?.GetAllValues() ?? Task.FromResult(new GetAllValuesResponse());
-        });
+        }).ToList();
 
         await Task.WhenAll(partitionRequests);
 
@@ -75,7 +76,7 @@ public class RoutingService(
         var dbRequest = mapper.Map<Data.KeyValueRequest>(request);
         dbRequest.Timestamp = Timestamp.FromDateTime(ntpService.Now);
 
-        var partition = GetPartition(request.Key);
+        var partition = _ring.GetPartition(request.Key);
 
         var result = await ExecuteWithReplicaThresholdAsync(
             () => partition.PrimaryReplica.SetValue(dbRequest),
@@ -96,7 +97,7 @@ public class RoutingService(
     {
         var timestamp = ntpService.Now;
 
-        var partition = GetPartition(request.Key);
+        var partition = _ring.GetPartition(request.Key);
 
         var result = await ExecuteWithReplicaThresholdAsync(
             async () =>
@@ -229,22 +230,5 @@ public class RoutingService(
             ReplicasTotal = replicasTotal,
             Warnings = warnings
         };
-    }
-
-    /// <summary>
-    /// Returns database partition based on hash of key
-    /// </summary>
-    private Partition GetPartition(string key)
-    {
-        // Compute hash based on key value
-        // We use xxHash here because it's a faster hashing solution than a cryptographic algorithm like SHA256
-        var computedHash = XxHash32.Hash(Encoding.UTF8.GetBytes(key));
-
-        // Convert hash to int and modulo to get consistent partition index
-        var index = Math.Abs(BitConverter.ToInt32(computedHash) % _partitions.Length);
-
-        logger.LogInformation("Selected partition: {Partition} for key: {Key}", index, key);
-
-        return _partitions[index];
     }
 }
