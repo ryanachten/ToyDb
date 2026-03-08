@@ -20,6 +20,7 @@ public class RoutingServiceRetryTests
     private readonly Mock<INtpService> _ntpServiceMock;
     private readonly HealthProbeService _healthProbeService;
     private readonly DeadLetterQueueService _deadLetterQueueService;
+    private readonly ConsistentHashRing _ring;
     private readonly RoutingService _service;
 
     public RoutingServiceRetryTests()
@@ -51,7 +52,9 @@ public class RoutingServiceRetryTests
             new Mock<ILogger<DeadLetterQueueService>>().Object,
             _routingOptionsMock.Object);
 
-        _service = new RoutingService(_routingOptionsMock.Object, _loggerMock.Object, _mapperMock.Object, _ntpServiceMock.Object, _healthProbeService, _deadLetterQueueService);
+        _ring = new ConsistentHashRing(_routingOptionsMock.Object, new Mock<ILogger<ConsistentHashRing>>().Object);
+
+        _service = new RoutingService(_routingOptionsMock.Object, _loggerMock.Object, _mapperMock.Object, _ntpServiceMock.Object, _healthProbeService, _deadLetterQueueService, _ring);
     }
 
     [Fact]
@@ -179,7 +182,8 @@ public class RoutingServiceRetryTests
         var deadLetterQueueService = new DeadLetterQueueService(
             new Mock<ILogger<DeadLetterQueueService>>().Object,
             _routingOptionsMock.Object);
-        var service = new RoutingService(_routingOptionsMock.Object, _loggerMock.Object, _mapperMock.Object, _ntpServiceMock.Object, _healthProbeService, deadLetterQueueService);
+        var ring = new ConsistentHashRing(_routingOptionsMock.Object, new Mock<ILogger<ConsistentHashRing>>().Object);
+        var service = new RoutingService(_routingOptionsMock.Object, _loggerMock.Object, _mapperMock.Object, _ntpServiceMock.Object, _healthProbeService, deadLetterQueueService, ring);
 
         var primaryMock = new Mock<ReplicaClient>();
         var partition = CreateTestPartition(primaryMock);

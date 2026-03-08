@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Buffers.Binary;
 using System.IO.Hashing;
 using System.Text;
@@ -5,23 +7,30 @@ using ToyDbRouting.Models;
 
 namespace ToyDbRouting.Services;
 
-public class ConsistentHashRing(int virtualNodesPerPartition)
+public class ConsistentHashRing(IOptions<RoutingOptions> options, ILogger<ConsistentHashRing> logger)
 {
-    private readonly SortedDictionary<uint, Partition> _ring = [];
+    private readonly SortedDictionary<uint, Partition> _ring = InitializeRing(options.Value);
     private uint[]? _sortedKeys;
 
-    public void AddPartition(Partition partition)
+    private static SortedDictionary<uint, Partition> InitializeRing(RoutingOptions options)
     {
-        for (int i = 0; i < virtualNodesPerPartition; i++)
-        {
-            var virtualNodeKey = $"{partition.PartitionId}:{i}";
-            var hash = Hash(virtualNodeKey);
-            _ring[hash] = partition;
-        }
+        var ring = new SortedDictionary<uint, Partition>();
+        var virtualNodeCount = options.VirtualNodesPerPartition;
 
-        // Invalidate sorted keys so they are rebuilt on next lookup
-        _sortedKeys = null;
+        foreach (var config in options.Partitions)
+        {
+            var partition = new Partition(config);
+            for (int i = 0; i < virtualNodeCount; i++)
+            {
+                var virtualNodeKey = $"{partition.PartitionId}:{i}";
+                var hash = Hash(virtualNodeKey);
+                ring[hash] = partition;
+            }
+        }
+        return ring;
     }
+
+    public IEnumerable<Partition> Partitions => _ring.Values.Distinct();
 
     /// <summary>
     /// Finds the responsible partition for a given key using the consistent hash ring.
@@ -62,7 +71,11 @@ public class ConsistentHashRing(int virtualNodesPerPartition)
             index = 0;
         }
 
-        return _ring[_sortedKeys[index]];
+        var partition = _ring[_sortedKeys[index]];
+
+        logger.LogInformation("Selected partition: {Partition} for key: {Key}", partition.PartitionId, key);
+
+        return partition;
     }
 
     private static uint Hash(string value)
