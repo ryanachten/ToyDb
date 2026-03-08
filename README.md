@@ -34,8 +34,8 @@ graph TD
     end
 
     Client -- "gRPC (Protobuf)" --> RS
-    RS -- "hash-based<br/>partitioning" --> P1
-    RS -- "hash-based<br/>partitioning" --> P2
+    RS -- "consistent-hashing-based<br/>partitioning" --> P1
+    RS -- "consistent-hashing-based<br/>partitioning" --> P2
     HP -. "health checks" .-> P1R1 & P1R2 & P2R1 & P2R2
     DLQ -. "retry failed writes" .-> P1 & P2
 
@@ -109,8 +109,8 @@ The current capabilities we aim to explore are:
 
 ### Partitioning
 
-- ToyDb computes a hash based on value keys and uses the modulo of these keys to assign to one of the available partitions. This helps ensure that values are uniformly distributed across partitions to prevent partition hot spots. However, it also means that user values are not adjacent, which could prove problematic if we need to support transactions and range queries in the future.
-- It is currently the client which determines the partition a key-value is assigned to. This feels a bit strange, but it also avoids the complexity and overhead of introducing a routing layer to coordinate partition allocation.
+- ToyDb uses consistent hashing to assign keys to partitions. This ensures that values are uniformly distributed and minimizes data reshuffling when partitions are added or removed from the cluster. Virtual nodes are used to further improve distribution balance.
+- The routing layer is responsible for determine the partition a key-value is assigned to. This keeps the client agnostic of the underlying cluster topology.
 
 ### Replication
 
