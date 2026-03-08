@@ -12,24 +12,6 @@ public class ConsistentHashRing(IOptions<RoutingOptions> options, ILogger<Consis
     private readonly SortedDictionary<uint, Partition> _ring = InitializeRing(options.Value);
     private uint[]? _sortedKeys;
 
-    private static SortedDictionary<uint, Partition> InitializeRing(RoutingOptions options)
-    {
-        var ring = new SortedDictionary<uint, Partition>();
-        var virtualNodeCount = options.VirtualNodesPerPartition;
-
-        foreach (var config in options.Partitions)
-        {
-            var partition = new Partition(config);
-            for (int i = 0; i < virtualNodeCount; i++)
-            {
-                var virtualNodeKey = $"{partition.PartitionId}:{i}";
-                var hash = Hash(virtualNodeKey);
-                ring[hash] = partition;
-            }
-        }
-        return ring;
-    }
-
     public IEnumerable<Partition> Partitions => _ring.Values.Distinct();
 
     /// <summary>
@@ -73,9 +55,38 @@ public class ConsistentHashRing(IOptions<RoutingOptions> options, ILogger<Consis
 
         var partition = _ring[_sortedKeys[index]];
 
-        logger.LogInformation("Selected partition: {Partition} for key: {Key}", partition.PartitionId, key);
+        logger.LogDebug("Selected partition: {PartitionId} for key hash: {Hash}", partition.PartitionId, hash);
 
         return partition;
+    }
+
+    private static SortedDictionary<uint, Partition> InitializeRing(RoutingOptions options)
+    {
+        if (options.VirtualNodesPerPartition <= 0)
+        {
+            throw new ArgumentException("VirtualNodesPerPartition must be greater than zero.", nameof(options.VirtualNodesPerPartition));
+        }
+
+        var ring = new SortedDictionary<uint, Partition>();
+        var virtualNodeCount = options.VirtualNodesPerPartition;
+
+        foreach (var config in options.Partitions)
+        {
+            var partition = new Partition(config);
+            for (int i = 0; i < virtualNodeCount; i++)
+            {
+                var virtualNodeKey = $"{partition.PartitionId}:{i}";
+                var hash = Hash(virtualNodeKey);
+
+                if (ring.ContainsKey(hash))
+                {
+                    throw new InvalidOperationException($"Hash collision detected while building the ring for virtual node '{virtualNodeKey}'.");
+                }
+
+                ring.Add(hash, partition);
+            }
+        }
+        return ring;
     }
 
     private static uint Hash(string value)
