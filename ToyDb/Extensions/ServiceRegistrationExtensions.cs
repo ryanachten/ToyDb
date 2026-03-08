@@ -31,6 +31,8 @@ public static class ServiceRegistrationExtensions
     {
         builder.Services.AddSingleton<ILsnProvider, LsnProvider>();
 
+        builder.Services.AddSingleton<IReplicationLogNotifier, ReplicationLogNotifier>();
+
         builder.Services.AddSingleton<IReadStorageService, ReadStorageService>();
 
         builder.Services.AddSingleton<IWriteStorageService, WriteStorageService>();

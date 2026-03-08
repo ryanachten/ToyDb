@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using Google.Protobuf.WellKnownTypes;
 using ToyDb.Caches;
 using ToyDb.Models;
 using ToyDb.Repositories.DataStoreRepository;
@@ -13,6 +14,7 @@ namespace ToyDb.Services
         private readonly IDataStoreRepository _storeRepository;
         private readonly IWriteAheadLogRepository _walRepository;
         private readonly ILsnProvider _lsnProvider;
+        private readonly IReplicationLogNotifier _replicationLogNotifier;
         private readonly ILogger<WriteStorageService> _logger;
 
         /// <summary>
@@ -28,6 +30,7 @@ namespace ToyDb.Services
             IDataStoreRepository storeRepository,
             IWriteAheadLogRepository walRepository,
             ILsnProvider lsnProvider,
+            IReplicationLogNotifier replicationLogNotifier,
             ILogger<WriteStorageService> logger)
         {
             _keyOffsetCache = keyOffsetCache;
@@ -35,6 +38,7 @@ namespace ToyDb.Services
             _storeRepository = storeRepository;
             _walRepository = walRepository;
             _lsnProvider = lsnProvider;
+            _replicationLogNotifier = replicationLogNotifier;
             _logger = logger;
 
             Task.Run(() => PollWriteQueue());
@@ -67,6 +71,16 @@ namespace ToyDb.Services
 
             _keyOffsetCache.Set(key, offset);
             _keyEntryCache.Set(key, value);
+
+            _replicationLogNotifier.Publish(new WalEntry
+            {
+                Lsn = lsn,
+                Timestamp = Timestamp.FromDateTime(DateTime.UtcNow),
+                Key = key,
+                Type = value.Type,
+                Data = value.Data,
+                IsDelete = false
+            });
         }
 
         private void ExecuteDeleteValue(string key)
@@ -82,6 +96,16 @@ namespace ToyDb.Services
 
             _keyOffsetCache.Remove(key);
             _keyEntryCache.Remove(key);
+
+            _replicationLogNotifier.Publish(new WalEntry
+            {
+                Lsn = lsn,
+                Timestamp = Timestamp.FromDateTime(DateTime.UtcNow),
+                Key = key,
+                Type = value.Type,
+                Data = value.Data,
+                IsDelete = true
+            });
         }
 
         private void ExecuteCompactLogs()
