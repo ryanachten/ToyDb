@@ -13,18 +13,15 @@ public class SecondaryCatchUpService(
     IWriteStorageService writeStorageService,
     IOptions<ReplicationOptions> options,
     ILogger<SecondaryCatchUpService> logger
-) : IHostedService
+) : BackgroundService
 {
-    public async Task StartAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (string.IsNullOrEmpty(options.Value.PrimaryNodeAddress))
         {
             logger.LogInformation("No primary address configured — skipping catch-up");
             return;
         }
-
-        var myLastLsn = walRepository.GetLatestLsn();
-        logger.LogInformation("Starting catch-up from LSN {Lsn} against primary {Primary}", myLastLsn + 1, options.Value.PrimaryNodeAddress);
 
         var handler = new HttpClientHandler
         {
@@ -34,29 +31,49 @@ public class SecondaryCatchUpService(
         var channel = GrpcChannel.ForAddress(options.Value.PrimaryNodeAddress, new GrpcChannelOptions { HttpHandler = handler });
         var client = new Data.DataClient(channel);
 
-        var stream = client.StreamReplicationLog(new StreamReplicationLogRequest { FromLsn = myLastLsn + 1 });
+        var delayMs = options.Value.RetryBaseDelayMs;
 
-        var count = 0;
-        await foreach (var entry in stream.ResponseStream.ReadAllAsync(cancellationToken))
+        while (!stoppingToken.IsCancellationRequested)
         {
-            var dbEntry = new DatabaseEntry
+            try
             {
-                Timestamp = entry.Timestamp,
-                Key = entry.Key,
-                Type = entry.Type,
-                Data = entry.Value ?? ByteString.Empty
-            };
+                var myLastLsn = walRepository.GetLatestLsn();
+                logger.LogInformation("Starting catch-up from LSN {Lsn} against primary {Primary}", myLastLsn + 1, options.Value.PrimaryNodeAddress);
 
-            if (entry.IsDelete)
-                await writeStorageService.DeleteValue(entry.Key);
-            else
-                await writeStorageService.SetValue(entry.Key, dbEntry);
+                var stream = client.StreamReplicationLog(new StreamReplicationLogRequest { FromLsn = myLastLsn + 1 });
 
-            count++;
+                var count = 0;
+                await foreach (var entry in stream.ResponseStream.ReadAllAsync(stoppingToken))
+                {
+                    var dbEntry = new DatabaseEntry
+                    {
+                        Timestamp = entry.Timestamp,
+                        Key = entry.Key,
+                        Type = entry.Type,
+                        Data = entry.Value ?? ByteString.Empty
+                    };
+
+                    if (entry.IsDelete)
+                        await writeStorageService.DeleteValue(entry.Key);
+                    else
+                        await writeStorageService.SetValue(entry.Key, dbEntry);
+
+                    count++;
+                }
+
+                logger.LogInformation("Replication stream ended. Applied {Count} entries", count);
+                delayMs = options.Value.RetryBaseDelayMs;
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Replication stream failed, retrying in {Delay}ms", delayMs);
+                await Task.Delay(delayMs, stoppingToken);
+                delayMs = Math.Min(delayMs * 2, options.Value.RetryMaxDelayMs);
+            }
         }
-
-        logger.LogInformation("Catch-up complete. Applied {Count} entries", count);
     }
-
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }
