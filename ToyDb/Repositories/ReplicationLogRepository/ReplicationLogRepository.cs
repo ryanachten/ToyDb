@@ -6,6 +6,9 @@ using Timestamp = Google.Protobuf.WellKnownTypes.Timestamp;
 
 namespace ToyDb.Repositories.ReplicationLogRepository;
 
+// TODO: directory resolution and ReadEntry deserialization are duplicated from BaseLogRepository.
+// Resolve by extracting a thinner base class that owns only file location + entry serialization,
+// with the rotating file logic moved to a subclass. ReplicationLogRepository can then extend the thin base.
 public class ReplicationLogRepository : IReplicationLogRepository
 {
     private readonly string _logLocation;
