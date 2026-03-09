@@ -9,15 +9,29 @@ namespace ToyDbUnitTests.Services;
 public class ReplicationLogNotifierTests
 {
     [Fact]
-    public void GivenPublishedEntry_WhenReading_ThenEntryIsReceived()
+    public async Task GivenPublishedEntry_WhenReading_ThenEntryIsReceived()
     {
         var notifier = new ReplicationLogNotifier();
         var entry = CreateWalEntry(1, "test-key", false);
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
+        // Subscribe before publishing - the notifier only delivers to active subscribers
+        WalEntry? received = null;
+        var readTask = Task.Run(async () =>
+        {
+            await foreach (var e in notifier.ReadAllAsync(cts.Token))
+            {
+                received = e;
+                break;
+            }
+        });
+
+        await Task.Delay(50);
         notifier.Publish(entry);
 
-        var received = notifier.ReadAllAsync(CancellationToken.None).ToBlockingEnumerable().First();
+        await readTask;
 
+        Assert.NotNull(received);
         Assert.Equal(entry.Lsn, received.Lsn);
         Assert.Equal(entry.Key, received.Key);
         Assert.Equal(entry.IsDelete, received.IsDelete);
@@ -34,18 +48,26 @@ public class ReplicationLogNotifierTests
             CreateWalEntry(3, "key3", true)
         };
 
+        // Subscribe before publishing - the notifier only delivers to active subscribers
+        var received = new List<WalEntry>();
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var readTask = Task.Run(async () =>
+        {
+            await foreach (var e in notifier.ReadAllAsync(cts.Token))
+            {
+                received.Add(e);
+                if (received.Count >= entries.Length)
+                    break;
+            }
+        });
+
+        await Task.Delay(50);
         foreach (var entry in entries)
         {
             notifier.Publish(entry);
         }
 
-        var received = new List<WalEntry>();
-        await foreach (var entry in notifier.ReadAllAsync(CancellationToken.None))
-        {
-            received.Add(entry);
-            if (received.Count >= entries.Length)
-                break;
-        }
+        await readTask;
 
         Assert.Equal(entries.Length, received.Count);
         Assert.Equal(entries[0].Lsn, received[0].Lsn);
