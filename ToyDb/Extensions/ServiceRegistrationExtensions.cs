@@ -1,7 +1,9 @@
 using ToyDb.Caches;
 using ToyDb.Repositories.DataStoreRepository;
+using ToyDb.Repositories.ReplicationLogRepository;
 using ToyDb.Repositories.WriteAheadLogRepository;
 using ToyDb.Services;
+using ToyDb.Services.CatchUp;
 using ToyDb.Services.LogCompaction;
 
 namespace ToyDb.Extensions;
@@ -43,6 +45,11 @@ public static class ServiceRegistrationExtensions
             builder.Configuration.GetSection(LogCompactionOptions.Key));
 
         builder.Services.AddHostedService<LogCompactionProcess>();
+
+        builder.Services.Configure<ReplicationOptions>(
+            builder.Configuration.GetSection(ReplicationOptions.Key));
+
+        builder.Services.AddHostedService<SecondaryCatchUpService>();
     }
 
     private static void RegisterRepositories(this WebApplicationBuilder builder)
@@ -56,5 +63,10 @@ public static class ServiceRegistrationExtensions
             builder.Configuration.GetSection(WriteAheadLogOptions.Key));
 
         builder.Services.AddSingleton<IWriteAheadLogRepository, WriteAheadLogRepository>();
+
+        builder.Services.Configure<ReplicationLogOptions>(
+            builder.Configuration.GetSection(ReplicationLogOptions.Key));
+
+        builder.Services.AddSingleton<IReplicationLogRepository, ReplicationLogRepository>();
     }
 }
