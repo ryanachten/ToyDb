@@ -93,6 +93,10 @@ public class ClientService(
     {
         try
         {
+            // Subscribe before draining the WAL so writes committed during the drain are buffered
+            // and not missed when transitioning to the live tail.
+            await using var subscription = replicationLogNotifier.Subscribe();
+
             var lastSentLsn = request.FromLsn - 1;
 
             var persistedEntries = walRepository.ReadFrom(request.FromLsn);
@@ -115,9 +119,9 @@ public class ClientService(
                 lastSentLsn = walEntry.Lsn;
             }
 
-            await foreach (var walEntry in replicationLogNotifier.ReadAllAsync(context.CancellationToken))
+            await foreach (var walEntry in subscription.ReadAllAsync(context.CancellationToken))
             {
-                // Skip entries that have already been sent
+                // Skip entries already sent via the persisted backlog (overlap from subscribe-before-drain)
                 if (walEntry.Lsn <= lastSentLsn)
                     continue;
 

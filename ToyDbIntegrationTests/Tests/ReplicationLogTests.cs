@@ -38,7 +38,10 @@ public class ReplicationLogTests
         var primaryClient = await DeterminePrimaryForKey(key);
         var entries = new List<ReplicationLogEntry>();
 
-        await foreach (var entry in primaryClient.StreamReplicationLog(0))
+        var cts = new CancellationTokenSource();
+        cts.CancelAfter(TimeSpan.FromSeconds(10));
+
+        await foreach (var entry in primaryClient.StreamReplicationLog(0, cts.Token))
         {
             entries.Add(entry);
             if (entry.Key == key)

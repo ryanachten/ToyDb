@@ -146,9 +146,10 @@ message ReplicationLogEntry {
 
 To support live-tailing without polling, `WriteStorageService` publishes new WAL entries to an in-process notification mechanism:
 
-- A new `IReplicationLogNotifier` / `ReplicationLogNotifier` singleton wraps a `Channel<ReplicationLogEntry>` (from `System.Threading.Channels`).
-- After each write, `WriteStorageService` writes the entry to the channel.
-- The streaming RPC implementation reads from the channel for live entries after it has drained the persisted backlog.
+- `IReplicationLogNotifier` / `ReplicationLogNotifier` is a singleton that maintains a per-subscriber `Channel<WalEntry>` (from `System.Threading.Channels`).
+- `Subscribe()` registers a new subscriber immediately and returns an `IReplicationLogSubscription` handle. The subscriber must be created **before** draining the persisted WAL backlog to avoid a gap where live writes are missed.
+- `Publish(WalEntry)` fans out to all active subscriber channels using a bounded channel (capacity 100, `DropWrite` mode). If a subscriber's channel is full, `TryWrite` returns false, the subscriber is disconnected, and it must reconnect from its last acknowledged LSN.
+- The streaming RPC creates a subscription, drains the WAL backlog, then reads live entries from the subscription, deduplicating by LSN to handle overlap.
 
 ### 2.9 WAL Truncation (Future)
 
@@ -203,8 +204,8 @@ Until then, the WAL grows unbounded — the same behaviour as today, but now wit
 
 | Item | Detail |
 |---|---|
-| **New files** | `ToyDb/Services/IReplicationLogNotifier.cs`, `ToyDb/Services/ReplicationLogNotifier.cs` |
-| **Implementation** | Wraps `Channel<ReplicationLogEntry>` (unbounded). `Publish(WalEntry)` writes to the channel. `ReadAllAsync(CancellationToken)` returns the channel reader's async enumerable. |
+| **New files** | `ToyDb/Services/IReplicationLogNotifier.cs`, `ToyDb/Services/IReplicationLogSubscription.cs`, `ToyDb/Services/ReplicationLogNotifier.cs` |
+| **Implementation** | Per-subscriber bounded `Channel<WalEntry>` (capacity 100, `DropWrite` mode). `Subscribe()` registers the subscriber immediately and returns an `IReplicationLogSubscription`. `Publish(WalEntry)` fans out to all subscribers; slow subscribers (channel full) are disconnected. |
 | **Registration** | Singleton |
 
 ### Step 7 — Wire into `WriteStorageService`
