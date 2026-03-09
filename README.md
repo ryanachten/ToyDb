@@ -15,37 +15,43 @@ graph TD
     end
 
     subgraph P1["Partition 1"]
-        P1R1["Primary Replica (p1-r1)"]
-        P1R2["Secondary Replica (p1-r2)"]
+        P1R1["Primary (p1-r1)"]
+        P1R2["Secondary (p1-r2)"]
     end
 
     subgraph P2["Partition 2"]
-        P2R1["Primary Replica (p2-r1)"]
-        P2R2["Secondary Replica (p2-r2)"]
+        P2R1["Primary (p2-r1)"]
+        P2R2["Secondary (p2-r2)"]
     end
 
     subgraph Node["ToyDb Node (per replica)"]
         CS[ClientService]
         WS[WriteStorageService]
         ReadS[ReadStorageService]
+        LSN[LsnProvider]
+        RLN[ReplicationLogNotifier]
         WAL[Write-Ahead Log]
         AOL[Append-only Log]
-        LC[Log Compaction]
+        LC[LogCompactionProcess]
+        WRS[WalRecoveryService]
+        CUS["SecondaryCatchUpService<br/>(secondary only)"]
     end
 
     Client -- "gRPC (Protobuf)" --> RS
-    RS -- "consistent-hashing-based<br/>partitioning" --> P1
-    RS -- "consistent-hashing-based<br/>partitioning" --> P2
+    RS -- "consistent hashing<br/>+ fan-out writes" --> P1R1 & P1R2
+    RS -- "consistent hashing<br/>+ fan-out writes" --> P2R1 & P2R2
     HP -. "health checks" .-> P1R1 & P1R2 & P2R1 & P2R2
     DLQ -. "retry failed writes" .-> P1 & P2
 
-    P1R1 -- "replication" --> P1R2
-    P2R1 -- "replication" --> P2R2
+    P1R2 -. "startup catch-up<br/>(StreamReplicationLog)" .-> P1R1
+    P2R2 -. "startup catch-up<br/>(StreamReplicationLog)" .-> P2R1
 
     CS --> WS & ReadS
-    WS --> WAL & AOL
+    WS --> LSN & WAL & AOL & RLN
     ReadS --> AOL
+    RLN -. "live tail" .-> CS
     LC -. "compaction" .-> AOL
+    WRS -. "startup recovery" .-> WAL & AOL
 ```
 
 The database is currently a simple key-value store which receives commands using gRPC.
