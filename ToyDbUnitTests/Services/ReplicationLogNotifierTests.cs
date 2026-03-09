@@ -17,9 +17,10 @@ public class ReplicationLogNotifierTests
 
         // Subscribe before publishing - the notifier only delivers to active subscribers
         WalEntry? received = null;
+        await using var subscription = notifier.Subscribe();
         var readTask = Task.Run(async () =>
         {
-            await foreach (var e in notifier.ReadAllAsync(cts.Token))
+            await foreach (var e in subscription.ReadAllAsync(cts.Token))
             {
                 received = e;
                 break;
@@ -51,9 +52,10 @@ public class ReplicationLogNotifierTests
         // Subscribe before publishing - the notifier only delivers to active subscribers
         var received = new List<WalEntry>();
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await using var subscription = notifier.Subscribe();
         var readTask = Task.Run(async () =>
         {
-            await foreach (var e in notifier.ReadAllAsync(cts.Token))
+            await foreach (var e in subscription.ReadAllAsync(cts.Token))
             {
                 received.Add(e);
                 if (received.Count >= entries.Length)
@@ -81,9 +83,10 @@ public class ReplicationLogNotifierTests
         var notifier = new ReplicationLogNotifier();
         var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
 
+        await using var subscription = notifier.Subscribe();
         var readTask = Task.Run(async () =>
         {
-            await foreach (var _ in notifier.ReadAllAsync(cts.Token))
+            await foreach (var _ in subscription.ReadAllAsync(cts.Token))
             {
                 return true;
             }
@@ -105,9 +108,10 @@ public class ReplicationLogNotifierTests
         var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
 
         var received = new List<WalEntry>();
+        await using var subscription = notifier.Subscribe();
         try
         {
-            await foreach (var entry in notifier.ReadAllAsync(cts.Token))
+            await foreach (var entry in subscription.ReadAllAsync(cts.Token))
             {
                 received.Add(entry);
             }

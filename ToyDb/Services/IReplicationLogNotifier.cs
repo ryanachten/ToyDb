@@ -5,5 +5,5 @@ namespace ToyDb.Services;
 public interface IReplicationLogNotifier
 {
     void Publish(WalEntry entry);
-    IAsyncEnumerable<WalEntry> ReadAllAsync(CancellationToken cancellationToken);
+    IReplicationLogSubscription Subscribe();
 }
