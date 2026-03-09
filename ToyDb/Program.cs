@@ -14,7 +14,6 @@ builder.RegisterServiceCollection();
 var app = builder.Build();
 
 app.MapGrpcService<ClientService>();
-app.MapGrpcService<ReplicationService>();
 app.MapGrpcHealthChecksService();
 
 await app.RunAsync();

@@ -3,13 +3,13 @@ using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.Extensions.Options;
 using ToyDb.Models;
-using ToyDb.Repositories.ReplicationLogRepository;
+using ToyDb.Repositories.WriteAheadLogRepository;
 using ToyDbContracts.Data;
 
 namespace ToyDb.Services.CatchUp;
 
 public class SecondaryCatchUpService(
-    IReplicationLogRepository replicationLogRepository,
+    IWriteAheadLogRepository walRepository,
     IWriteStorageService writeStorageService,
     IOptions<ReplicationOptions> options,
     ILogger<SecondaryCatchUpService> logger
@@ -23,7 +23,7 @@ public class SecondaryCatchUpService(
             return;
         }
 
-        var myLastLsn = replicationLogRepository.GetLatestLsn();
+        var myLastLsn = walRepository.GetLatestLsn();
         logger.LogInformation("Starting catch-up from LSN {Lsn} against primary {Primary}", myLastLsn + 1, options.Value.PrimaryNodeAddress);
 
         var handler = new HttpClientHandler
@@ -47,7 +47,7 @@ public class SecondaryCatchUpService(
                 Data = entry.Value ?? ByteString.Empty
             };
 
-            if (entry.Type == DataType.Null)
+            if (entry.IsDelete)
                 await writeStorageService.DeleteValue(entry.Key);
             else
                 await writeStorageService.SetValue(entry.Key, dbEntry);

@@ -34,7 +34,7 @@ service Data {
 	rpc GetAllValues (GetAllValuesRequest) returns (GetAllValuesResponse);
 	rpc SetValue (KeyValueRequest) returns (KeyValueResponse);
 	rpc DeleteValue (DeleteRequest) returns (DeleteResponse);
-	rpc StreamReplicationLog (StreamReplicationLogRequest) returns (stream ReplicationLogEntryMessage);
+	rpc StreamReplicationLog (StreamReplicationLogRequest) returns (stream ReplicationLogEntry);
 }
 
 message GetRequest {
@@ -61,10 +61,11 @@ message StreamReplicationLogRequest {
 	int64 from_lsn = 1;
 }
 
-message ReplicationLogEntryMessage {
+message ReplicationLogEntry {
 	int64 lsn = 1;
 	google.protobuf.Timestamp timestamp = 2;
-	DataType type = 3;
-	string key = 4;
+	string key = 3;
+	DataType type = 4;
 	google.protobuf.BytesValue value = 5;
+	bool is_delete = 6;
 }
