@@ -23,6 +23,60 @@
 - Do not add Arrange Act Assert comments, but do logically group statements in these arrangements
 - Ensure private helper methods are at the bottom of the file following public methods
 
+## Plans Directory Standards
+
+All files in the `plans/` directory should follow a standardized naming convention and structure.
+
+### Naming Convention
+Files should be named as `[type]-[description].md`:
+- `plan-`: Proposed or active implementation plans.
+- `review-`: Architecture reviews or state-of-the-system documents.
+- `story-`: Specific feature stories
+
+Files are moved to `completed/` when finished.
+
+### Standard Templates
+
+#### Plan Template
+```markdown
+# Plan: [Title]
+
+## Objective
+[Brief description of the goal]
+
+## Context & Background
+[Context or rationale for the change]
+
+## Architecture & Design
+[High-level design details, algorithms, or architectural changes]
+
+## Implementation Steps
+[Numbered list of specific tasks]
+
+## Verification & Testing
+[How to verify the implementation]
+
+## References
+[Links to related documents or issues]
+```
+
+#### Review Template
+```markdown
+# Review: [Title]
+
+## Overview
+[High-level summary of the review]
+
+## Current State
+[Description of the existing architecture/implementation]
+
+## Gaps & Issues
+[Identified problems or missing features]
+
+## Recommendations
+[Proposed next steps or improvements]
+```
+
 ## Contribution guidelines
 - You have both `git` and GitHub commandline (`gh`) available to you for creating commits and pull requests
 - Use [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/) standard prefixes (`feat`, `test`, `ci`, etc) depending on the type of change being made. These prefixes are written in lowercase.

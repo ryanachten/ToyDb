@@ -406,5 +406,4 @@ certs
 _bmad
 _bmad-output
 .opencode
-.agents/shared
-.gitmodules
+.agents/skills/shared
