@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+option csharp_namespace = "ToyDbContracts.Election";
+
+message RequestVoteRequest {
+	int64 term = 1;
+	string node_id = 2;
+	int64 last_lsn = 3;
+}
+
+message VoteResponse {
+	bool granted = 1;
+	int64 term = 2;
+	string node_id = 3;
+}
+
+message HeartbeatRequest {
+	int64 term = 1;
+	string leader_id = 2;
+	int64 commit_lsn = 3;
+}
+
+message HeartbeatResponse {
+	int64 term = 1;
+	bool success = 2;
+}
+
+service Election {
+	rpc RequestVote (RequestVoteRequest) returns (VoteResponse);
+	rpc Heartbeat (HeartbeatRequest) returns (HeartbeatResponse);
+}

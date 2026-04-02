@@ -3,7 +3,7 @@
 namespace ToyDb.Services.LogCompaction;
 
 public class LogCompactionProcess(
-    IWriteStorageService dataStorageService, 
+    IWriteStorageService dataStorageService,
     ILogger<LogCompactionProcess> logger
 ) : BackgroundService
 {

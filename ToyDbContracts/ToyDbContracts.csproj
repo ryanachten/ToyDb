@@ -16,5 +16,6 @@
 	<ItemGroup>
 		<Protobuf Include="Protos\data.proto" />
 		<Protobuf Include="Protos\routing.proto" />
+		<Protobuf Include="Protos\election.proto" />
 	</ItemGroup>
 </Project>

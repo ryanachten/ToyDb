@@ -33,6 +33,9 @@ public static class ServiceRegistrationExtensions
         builder.Services.Configure<ReplicaOptions>(
             builder.Configuration.GetSection(ReplicaOptions.Key));
 
+        builder.Services.Configure<ClusterOptions>(
+            builder.Configuration.GetSection(ClusterOptions.Key));
+
         builder.Services.AddSingleton<ILsnProvider, LsnProvider>();
 
         builder.Services.AddSingleton<IReplicationLogNotifier, ReplicationLogNotifier>();
@@ -47,6 +50,8 @@ public static class ServiceRegistrationExtensions
             builder.Configuration.GetSection(LogCompactionOptions.Key));
 
         builder.Services.AddHostedService<SecondaryCatchUpService>();
+
+        builder.Services.AddHostedService<ElectionService>();
 
         builder.Services.AddHostedService<LogCompactionProcess>();
     }

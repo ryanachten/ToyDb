@@ -8,8 +8,10 @@ services:
     depends_on:
     - toydb-p1-r1
     - toydb-p1-r2
+    - toydb-p1-r3
     - toydb-p2-r1
     - toydb-p2-r2
+    - toydb-p2-r3
   toydb-p1-r1:
     container_name: toydb-p1-r1
     image: ${DOCKER_REGISTRY-}toydb
@@ -30,6 +32,18 @@ services:
       dockerfile: ToyDb/Dockerfile
   toydb-p2-r2:
     container_name: toydb-p2-r2
+    image: ${DOCKER_REGISTRY-}toydb
+    build:
+      context: .
+      dockerfile: ToyDb/Dockerfile
+  toydb-p1-r3:
+    container_name: toydb-p1-r3
+    image: ${DOCKER_REGISTRY-}toydb
+    build:
+      context: .
+      dockerfile: ToyDb/Dockerfile
+  toydb-p2-r3:
+    container_name: toydb-p2-r3
     image: ${DOCKER_REGISTRY-}toydb
     build:
       context: .
