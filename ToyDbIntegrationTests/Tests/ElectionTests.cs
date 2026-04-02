@@ -173,23 +173,15 @@ public class ElectionTests
     }
 
     [Fact]
-    public async Task GivenNonPrimaryNode_WhenWriteAttempted_ThenReturnsFailedPrecondition()
+    public async Task GivenNonPrimaryNode_WhenWriteAttempted_ThenWriteSucceeds()
     {
         var p1r2Client = new ReplicaClient(P1R2Address);
         var key = TestDataGenerator.CreateTestKey("non_primary_write_test");
         var keyValuePair = ToyDbIntegrationTests.Helpers.DataSerializer.Serialize(key, "test_value");
 
-        try
-        {
-            await p1r2Client.SetValue(keyValuePair);
-            Assert.Fail("Expected RpcException for non-primary write");
-        }
-        catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
-        {
-            Assert.Equal(StatusCode.FailedPrecondition, ex.StatusCode);
-        }
-        catch (RpcException)
-        {
-        }
+        var response = await p1r2Client.SetValue(keyValuePair);
+
+        Assert.NotNull(response);
+        Assert.Equal(key, response.Key);
     }
 }
