@@ -15,7 +15,6 @@ public class ClientService(
     IWriteStorageService writeStorageService,
     IWriteAheadLogRepository walRepository,
     IReplicationLogNotifier replicationLogNotifier,
-    ReplicaState replicaState,
     ILogger<ClientService> logger
 ) : Data.DataBase
 {
@@ -58,11 +57,6 @@ public class ClientService(
 
     public override async Task<KeyValueResponse> SetValue(KeyValueRequest request, ServerCallContext context)
     {
-        if (!replicaState.IsPrimary)
-        {
-            throw new RpcException(new Grpc.Core.Status(StatusCode.FailedPrecondition, "Not primary"));
-        }
-
         var timer = logger.StartTimedLog(nameof(SetValue), request.Key);
 
         await writeStorageService.SetValue(request.Key, new DatabaseEntry()
@@ -87,11 +81,6 @@ public class ClientService(
 
     public override async Task<DeleteResponse> DeleteValue(DeleteRequest request, ServerCallContext context)
     {
-        if (!replicaState.IsPrimary)
-        {
-            throw new RpcException(new Grpc.Core.Status(StatusCode.FailedPrecondition, "Not primary"));
-        }
-
         var timer = logger.StartTimedLog(nameof(DeleteValue), request.Key);
 
         await writeStorageService.DeleteValue(request.Key);
