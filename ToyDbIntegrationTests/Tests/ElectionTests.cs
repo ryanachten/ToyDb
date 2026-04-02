@@ -112,7 +112,7 @@ public class ElectionTests
 
         var request = new HeartbeatRequest
         {
-            Term = 1,
+            Term = 9999,
             LeaderId = "test-leader",
             CommitLsn = 0
         };
