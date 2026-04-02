@@ -22,6 +22,13 @@ public class ElectionService(
     {
         _isPrimary = _replica.Role == ReplicaRole.Primary;
 
+        if (string.IsNullOrWhiteSpace(_cluster.NodeId))
+        {
+            logger.LogInformation(
+                "Cluster options not configured, skipping election service");
+            return;
+        }
+
         if (_isPrimary)
         {
             replicaState.SetIsPrimary(true);
