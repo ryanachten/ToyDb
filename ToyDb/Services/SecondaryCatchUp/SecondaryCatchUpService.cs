@@ -15,38 +15,82 @@ public class SecondaryCatchUpService(
     IWriteAheadLogRepository walRepository,
     IKeyOffsetCache keyOffsetCache,
     IKeyEntryCache keyEntryCache,
+    ReplicaState replicaState,
     IOptions<ReplicaOptions> replicaOptions,
+    IOptions<ClusterOptions> clusterOptions,
     ILogger<SecondaryCatchUpService> logger
 ) : BackgroundService
 {
     private const int MaxRetryAttempts = 3;
     private static readonly TimeSpan BaseRetryDelay = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan ReconnectDelay = TimeSpan.FromSeconds(2);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (replicaOptions.Value.Role != ReplicaRole.Secondary)
+        if (replicaOptions.Value.Role != ReplicaRole.Secondary && !replicaState.IsPrimary)
         {
-            logger.LogInformation("Node is not a secondary, skipping catch-up");
+            logger.LogInformation("Node is a secondary, will monitor for leader changes");
+        }
+        else if (replicaState.IsPrimary)
+        {
+            logger.LogInformation("Node is primary, skipping catch-up");
             return;
         }
 
-        var primaryAddress = replicaOptions.Value.PrimaryAddress;
-        if (string.IsNullOrWhiteSpace(primaryAddress))
+        var currentPrimaryAddress = GetPrimaryAddress();
+
+        while (!stoppingToken.IsCancellationRequested)
         {
-            logger.LogWarning("Primary address not configured, skipping catch-up");
-            return;
+            if (replicaState.IsPrimary)
+            {
+                logger.LogInformation("Node became primary, stopping catch-up");
+                return;
+            }
+
+            var primaryAddress = GetPrimaryAddress();
+
+            if (string.IsNullOrWhiteSpace(primaryAddress))
+            {
+                logger.LogWarning("No primary address available, waiting for leader election");
+                await Task.Delay(ReconnectDelay, stoppingToken);
+                continue;
+            }
+
+            if (primaryAddress != currentPrimaryAddress)
+            {
+                logger.LogInformation(
+                    "Primary changed from {OldPrimary} to {NewPrimary}, reconnecting",
+                    currentPrimaryAddress, primaryAddress);
+                currentPrimaryAddress = primaryAddress;
+            }
+
+            try
+            {
+                await CatchUpWithRetryAsync(primaryAddress, stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                logger.LogInformation("Catch-up cancelled");
+                return;
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex,
+                    "Replication stream from {PrimaryAddress} ended, will reconnect",
+                    primaryAddress);
+                await Task.Delay(ReconnectDelay, stoppingToken);
+            }
+        }
+    }
+
+    private string? GetPrimaryAddress()
+    {
+        if (!string.IsNullOrWhiteSpace(replicaState.LeaderAddress))
+        {
+            return replicaState.LeaderAddress;
         }
 
-        var timer = logger.StartTimedLog(nameof(ExecuteAsync));
-
-        try
-        {
-            await CatchUpWithRetryAsync(primaryAddress, stoppingToken);
-        }
-        finally
-        {
-            timer.Stop();
-        }
+        return replicaOptions.Value.PrimaryAddress;
     }
 
     private async Task CatchUpWithRetryAsync(string primaryAddress, CancellationToken stoppingToken)
@@ -74,8 +118,9 @@ public class SecondaryCatchUpService(
             catch (Exception ex)
             {
                 logger.LogError(ex,
-                    "Catch-up from primary {PrimaryAddress} failed after {MaxAttempts} attempts, node will start without catch-up",
+                    "Catch-up from primary {PrimaryAddress} failed after {MaxAttempts} attempts",
                     primaryAddress, MaxRetryAttempts);
+                throw;
             }
         }
     }

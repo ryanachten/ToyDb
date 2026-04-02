@@ -18,7 +18,7 @@ public class HealthProbeService : BackgroundService
     {
         _logger = logger;
         _routingOptions = routingOptions.Value;
-        
+
         if (_routingOptions.HealthProbeIntervalSeconds <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(routingOptions), "HealthProbeIntervalSeconds must be greater than zero.");

@@ -12,7 +12,7 @@ public class TimedLogger<T>(ILogger<T> logger, string requestName)
         _stopwatch.Start();
         _key = key;
 
-        if(key != null)
+        if (key != null)
         {
             logger.LogInformation(
                 "Received request. RequestName: {RequestName}. Key: {Key}",

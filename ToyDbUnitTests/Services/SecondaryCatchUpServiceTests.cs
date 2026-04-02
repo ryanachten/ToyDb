@@ -17,12 +17,15 @@ public class SecondaryCatchUpServiceTests
     private readonly Mock<IKeyOffsetCache> _keyOffsetCacheMock = new();
     private readonly Mock<IKeyEntryCache> _keyEntryCacheMock = new();
     private readonly Mock<ILogger<SecondaryCatchUpService>> _loggerMock = new();
+    private readonly ReplicaState _replicaState = new();
 
     [Fact]
     public async Task GivenPrimaryNode_WhenStarted_ThenSkipsCatchUp()
     {
-        var options = Options.Create(new ReplicaOptions { Role = ReplicaRole.Primary });
-        var service = CreateService(options);
+        var replicaOptions = Options.Create(new ReplicaOptions { Role = ReplicaRole.Primary });
+        var clusterOptions = Options.Create(CreateClusterOptions());
+        _replicaState.SetIsPrimary(true);
+        var service = CreateService(replicaOptions, clusterOptions);
 
         await service.StartAsync(CancellationToken.None);
         await Task.Delay(500);
@@ -33,14 +36,15 @@ public class SecondaryCatchUpServiceTests
     }
 
     [Fact]
-    public async Task GivenSecondaryWithNoPrimaryAddress_WhenStarted_ThenSkipsCatchUp()
+    public async Task GivenSecondaryWithNoPrimaryAddress_WhenStarted_ThenWaitsForLeader()
     {
-        var options = Options.Create(new ReplicaOptions
+        var replicaOptions = Options.Create(new ReplicaOptions
         {
             Role = ReplicaRole.Secondary,
             PrimaryAddress = null
         });
-        var service = CreateService(options);
+        var clusterOptions = Options.Create(CreateClusterOptions());
+        var service = CreateService(replicaOptions, clusterOptions);
 
         await service.StartAsync(CancellationToken.None);
         await Task.Delay(500);
@@ -50,14 +54,15 @@ public class SecondaryCatchUpServiceTests
     }
 
     [Fact]
-    public async Task GivenSecondaryWithEmptyPrimaryAddress_WhenStarted_ThenSkipsCatchUp()
+    public async Task GivenSecondaryWithEmptyPrimaryAddress_WhenStarted_ThenWaitsForLeader()
     {
-        var options = Options.Create(new ReplicaOptions
+        var replicaOptions = Options.Create(new ReplicaOptions
         {
             Role = ReplicaRole.Secondary,
             PrimaryAddress = ""
         });
-        var service = CreateService(options);
+        var clusterOptions = Options.Create(CreateClusterOptions());
+        var service = CreateService(replicaOptions, clusterOptions);
 
         await service.StartAsync(CancellationToken.None);
         await Task.Delay(500);
@@ -69,12 +74,13 @@ public class SecondaryCatchUpServiceTests
     [Fact]
     public async Task GivenPrimaryUnreachable_WhenStarted_ThenDoesNotThrow()
     {
-        var options = Options.Create(new ReplicaOptions
+        var replicaOptions = Options.Create(new ReplicaOptions
         {
             Role = ReplicaRole.Secondary,
             PrimaryAddress = "https://nonexistent-host:9999"
         });
-        var service = CreateService(options);
+        var clusterOptions = Options.Create(CreateClusterOptions());
+        var service = CreateService(replicaOptions, clusterOptions);
 
         await service.StartAsync(CancellationToken.None);
         await Task.Delay(10000);
@@ -83,7 +89,9 @@ public class SecondaryCatchUpServiceTests
         _walRepositoryMock.Verify(r => r.GetLatestLsn(), Times.AtLeast(2));
     }
 
-    private SecondaryCatchUpService CreateService(IOptions<ReplicaOptions> options)
+    private SecondaryCatchUpService CreateService(
+        IOptions<ReplicaOptions> replicaOptions,
+        IOptions<ClusterOptions> clusterOptions)
     {
         return new SecondaryCatchUpService(
             _lsnProviderMock.Object,
@@ -91,7 +99,19 @@ public class SecondaryCatchUpServiceTests
             _walRepositoryMock.Object,
             _keyOffsetCacheMock.Object,
             _keyEntryCacheMock.Object,
-            options,
+            _replicaState,
+            replicaOptions,
+            clusterOptions,
             _loggerMock.Object);
+    }
+
+    private static ClusterOptions CreateClusterOptions()
+    {
+        return new ClusterOptions
+        {
+            NodeId = "test-node",
+            PartitionId = "p1",
+            PeerAddresses = []
+        };
     }
 }

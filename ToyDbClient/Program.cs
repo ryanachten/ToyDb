@@ -10,7 +10,7 @@ internal static class Program
         var commandService = new CommandService();
 
         var rootCommand = commandService.CreateRootCommand();
-        
+
         return await rootCommand.InvokeAsync(args);
     }
 }
