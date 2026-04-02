@@ -17,7 +17,7 @@ public class SecondaryCatchUpServiceTests
     private readonly Mock<IKeyOffsetCache> _keyOffsetCacheMock = new();
     private readonly Mock<IKeyEntryCache> _keyEntryCacheMock = new();
     private readonly Mock<ILogger<SecondaryCatchUpService>> _loggerMock = new();
-    private readonly ReplicaState _replicaState = new();
+    private readonly ReplicaState _replicaState = new(Options.Create(new ReplicaOptions { Role = ReplicaRole.Secondary }));
 
     [Fact]
     public async Task GivenPrimaryNode_WhenStarted_ThenSkipsCatchUp()

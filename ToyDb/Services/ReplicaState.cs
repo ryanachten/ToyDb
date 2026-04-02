@@ -1,13 +1,15 @@
+using Microsoft.Extensions.Options;
+
 namespace ToyDb.Services;
 
-public class ReplicaState
+public class ReplicaState(IOptions<ReplicaOptions> replicaOptions)
 {
     private long _currentTerm;
     private string? _votedFor;
     private string? _leaderId;
     private string? _leaderAddress;
     private DateTime _lastHeartbeatReceived = DateTime.UtcNow;
-    private bool _isPrimary;
+    private bool _isPrimary = replicaOptions.Value.Role == ReplicaRole.Primary;
 
     public long CurrentTerm => Interlocked.Read(ref _currentTerm);
 
