@@ -4,7 +4,11 @@ using ToyDb.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddGrpc();
+builder.Services.AddGrpc(options =>
+{
+    options.MaxReceiveMessageSize = 100 * 1024 * 1024;
+    options.MaxSendMessageSize = 100 * 1024 * 1024;
+});
 builder.Services.AddGrpcHealthChecks()
     // TODO: should this do something more meaningful
     .AddCheck("ping", () => HealthCheckResult.Healthy());

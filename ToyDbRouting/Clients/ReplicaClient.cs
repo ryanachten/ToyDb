@@ -20,13 +20,14 @@ public class ReplicaClient
         Address = dbAddress;
         var handler = new HttpClientHandler
         {
-            // TODO: this is a hack - investigate properly
             ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
         };
 
         var channel = GrpcChannel.ForAddress(dbAddress, new GrpcChannelOptions
         {
-            HttpHandler = handler
+            HttpHandler = handler,
+            MaxReceiveMessageSize = 100 * 1024 * 1024,
+            MaxSendMessageSize = 100 * 1024 * 1024
         });
         _dataClient = new Data.DataClient(channel);
     }

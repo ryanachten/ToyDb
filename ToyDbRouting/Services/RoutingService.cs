@@ -49,22 +49,25 @@ public class RoutingService(
     {
         var allValues = new Routing.GetAllValuesResponse();
 
-        var partitionRequests = _ring.Partitions.Select(partition =>
+        foreach (var partition in _ring.Partitions)
         {
-            var replica = partition.GetReadReplica(healthProbeService.HealthStates);
-            return replica?.GetAllValues() ?? Task.FromResult(new GetAllValuesResponse());
-        }).ToList();
-
-        await Task.WhenAll(partitionRequests);
-
-        foreach (var partition in partitionRequests)
-        {
-            if (partition.Result == null || partition.Result.Values == null) continue;
-
-            foreach (var value in partition.Result.Values)
+            try
             {
-                if (value == null) continue;
-                allValues.Values.Add(mapper.Map<Routing.KeyValueResponse>(value));
+                var replica = partition.GetReadReplica(healthProbeService.HealthStates);
+                if (replica == null) continue;
+
+                var result = await replica.GetAllValues();
+                if (result?.Values == null) continue;
+
+                foreach (var value in result.Values)
+                {
+                    if (value == null) continue;
+                    allValues.Values.Add(mapper.Map<Routing.KeyValueResponse>(value));
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to get values from partition {PartitionId}", partition.PartitionId);
             }
         }
 
