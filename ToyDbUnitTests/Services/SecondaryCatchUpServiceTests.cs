@@ -17,15 +17,18 @@ public class SecondaryCatchUpServiceTests
     private readonly Mock<IKeyOffsetCache> _keyOffsetCacheMock = new();
     private readonly Mock<IKeyEntryCache> _keyEntryCacheMock = new();
     private readonly Mock<ILogger<SecondaryCatchUpService>> _loggerMock = new();
-    private readonly ReplicaState _replicaState = new(Options.Create(new ReplicaOptions { Role = ReplicaRole.Secondary }));
+
+    private static ReplicaState CreateReplicaState() =>
+        new(Options.Create(new ReplicaOptions { Role = ReplicaRole.Secondary }));
 
     [Fact]
     public async Task GivenPrimaryNode_WhenStarted_ThenSkipsCatchUp()
     {
+        var replicaState = CreateReplicaState();
         var replicaOptions = Options.Create(new ReplicaOptions { Role = ReplicaRole.Primary });
         var clusterOptions = Options.Create(CreateClusterOptions());
-        _replicaState.SetIsPrimary(true);
-        var service = CreateService(replicaOptions, clusterOptions);
+        replicaState.SetIsPrimary(true);
+        var service = CreateService(replicaOptions, clusterOptions, replicaState);
 
         await service.StartAsync(CancellationToken.None);
         await Task.Delay(500);
@@ -38,13 +41,14 @@ public class SecondaryCatchUpServiceTests
     [Fact]
     public async Task GivenSecondaryWithNoPrimaryAddress_WhenStarted_ThenWaitsForLeader()
     {
+        var replicaState = CreateReplicaState();
         var replicaOptions = Options.Create(new ReplicaOptions
         {
             Role = ReplicaRole.Secondary,
             PrimaryAddress = null
         });
         var clusterOptions = Options.Create(CreateClusterOptions());
-        var service = CreateService(replicaOptions, clusterOptions);
+        var service = CreateService(replicaOptions, clusterOptions, replicaState);
 
         await service.StartAsync(CancellationToken.None);
         await Task.Delay(500);
@@ -56,13 +60,14 @@ public class SecondaryCatchUpServiceTests
     [Fact]
     public async Task GivenSecondaryWithEmptyPrimaryAddress_WhenStarted_ThenWaitsForLeader()
     {
+        var replicaState = CreateReplicaState();
         var replicaOptions = Options.Create(new ReplicaOptions
         {
             Role = ReplicaRole.Secondary,
             PrimaryAddress = ""
         });
         var clusterOptions = Options.Create(CreateClusterOptions());
-        var service = CreateService(replicaOptions, clusterOptions);
+        var service = CreateService(replicaOptions, clusterOptions, replicaState);
 
         await service.StartAsync(CancellationToken.None);
         await Task.Delay(500);
@@ -74,13 +79,14 @@ public class SecondaryCatchUpServiceTests
     [Fact]
     public async Task GivenPrimaryUnreachable_WhenStarted_ThenDoesNotThrow()
     {
+        var replicaState = CreateReplicaState();
         var replicaOptions = Options.Create(new ReplicaOptions
         {
             Role = ReplicaRole.Secondary,
             PrimaryAddress = "https://nonexistent-host:9999"
         });
         var clusterOptions = Options.Create(CreateClusterOptions());
-        var service = CreateService(replicaOptions, clusterOptions);
+        var service = CreateService(replicaOptions, clusterOptions, replicaState);
 
         await service.StartAsync(CancellationToken.None);
         await Task.Delay(10000);
@@ -91,7 +97,8 @@ public class SecondaryCatchUpServiceTests
 
     private SecondaryCatchUpService CreateService(
         IOptions<ReplicaOptions> replicaOptions,
-        IOptions<ClusterOptions> clusterOptions)
+        IOptions<ClusterOptions> clusterOptions,
+        ReplicaState replicaState)
     {
         return new SecondaryCatchUpService(
             _lsnProviderMock.Object,
@@ -99,9 +106,10 @@ public class SecondaryCatchUpServiceTests
             _walRepositoryMock.Object,
             _keyOffsetCacheMock.Object,
             _keyEntryCacheMock.Object,
-            _replicaState,
+            replicaState,
             replicaOptions,
             clusterOptions,
+            Options.Create(new SecondaryCatchUpOptions()),
             _loggerMock.Object);
     }
 

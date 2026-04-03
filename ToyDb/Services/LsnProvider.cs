@@ -11,6 +11,8 @@ public class LsnProvider(IWriteAheadLogRepository walRepository) : ILsnProvider
 {
     private long _current = walRepository.GetLatestLsn();
 
+    public long Current => Interlocked.Read(ref _current);
+
     public long Next() => Interlocked.Increment(ref _current);
 
     public void SyncTo(long lsn)

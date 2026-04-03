@@ -24,6 +24,7 @@ services:
       - Replica__PartitionId=p1
       - Cluster__NodeId=p1-r1
       - Cluster__PartitionId=p1
+      - Cluster__SelfAddress=https://toydb-p1-r1:8081
       - Cluster__PeerAddresses__0=https://toydb-p1-r2:8081
       - Cluster__PeerAddresses__1=https://toydb-p1-r3:8081
     ports:
@@ -45,6 +46,7 @@ services:
       - Replica__PartitionId=p1
       - Cluster__NodeId=p1-r2
       - Cluster__PartitionId=p1
+      - Cluster__SelfAddress=https://toydb-p1-r2:8081
       - Cluster__PeerAddresses__0=https://toydb-p1-r1:8081
       - Cluster__PeerAddresses__1=https://toydb-p1-r3:8081
     ports:
@@ -65,6 +67,7 @@ services:
       - Replica__PartitionId=p2
       - Cluster__NodeId=p2-r1
       - Cluster__PartitionId=p2
+      - Cluster__SelfAddress=https://toydb-p2-r1:8081
       - Cluster__PeerAddresses__0=https://toydb-p2-r2:8081
       - Cluster__PeerAddresses__1=https://toydb-p2-r3:8081
     ports:
@@ -86,6 +89,7 @@ services:
       - Replica__PartitionId=p2
       - Cluster__NodeId=p2-r2
       - Cluster__PartitionId=p2
+      - Cluster__SelfAddress=https://toydb-p2-r2:8081
       - Cluster__PeerAddresses__0=https://toydb-p2-r1:8081
       - Cluster__PeerAddresses__1=https://toydb-p2-r3:8081
     ports:
@@ -107,6 +111,7 @@ services:
       - Replica__PartitionId=p1
       - Cluster__NodeId=p1-r3
       - Cluster__PartitionId=p1
+      - Cluster__SelfAddress=https://toydb-p1-r3:8081
       - Cluster__PeerAddresses__0=https://toydb-p1-r1:8081
       - Cluster__PeerAddresses__1=https://toydb-p1-r2:8081
     ports:
@@ -128,6 +133,7 @@ services:
       - Replica__PartitionId=p2
       - Cluster__NodeId=p2-r3
       - Cluster__PartitionId=p2
+      - Cluster__SelfAddress=https://toydb-p2-r3:8081
       - Cluster__PeerAddresses__0=https://toydb-p2-r1:8081
       - Cluster__PeerAddresses__1=https://toydb-p2-r2:8081
     ports:

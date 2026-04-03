@@ -5,11 +5,12 @@ namespace ToyDb.Services;
 public class ReplicaState(IOptions<ReplicaOptions> replicaOptions)
 {
     private long _currentTerm;
-    private string? _votedFor;
-    private string? _leaderId;
-    private string? _leaderAddress;
-    private DateTime _lastHeartbeatReceived = DateTime.UtcNow;
-    private bool _isPrimary = replicaOptions.Value.Role == ReplicaRole.Primary;
+    private volatile string? _votedFor;
+    private volatile string? _leaderId;
+    private volatile string? _leaderAddress;
+    private long _lastHeartbeatTicks = DateTime.UtcNow.Ticks;
+    private volatile bool _isPrimary = replicaOptions.Value.Role == ReplicaRole.Primary;
+    private readonly object _leaderLock = new();
 
     public long CurrentTerm => Interlocked.Read(ref _currentTerm);
 
@@ -19,7 +20,7 @@ public class ReplicaState(IOptions<ReplicaOptions> replicaOptions)
 
     public string? LeaderAddress => _leaderAddress;
 
-    public DateTime LastHeartbeatReceived => _lastHeartbeatReceived;
+    public DateTime LastHeartbeatReceived => new(Interlocked.Read(ref _lastHeartbeatTicks));
 
     public bool IsPrimary => _isPrimary;
 
@@ -51,8 +52,11 @@ public class ReplicaState(IOptions<ReplicaOptions> replicaOptions)
 
     public void SetLeader(string? leaderId, string? leaderAddress)
     {
-        _leaderId = leaderId;
-        _leaderAddress = leaderAddress;
+        lock (_leaderLock)
+        {
+            _leaderId = leaderId;
+            _leaderAddress = leaderAddress;
+        }
     }
 
     public void ResetVote()
@@ -62,6 +66,6 @@ public class ReplicaState(IOptions<ReplicaOptions> replicaOptions)
 
     public void UpdateHeartbeatReceived()
     {
-        _lastHeartbeatReceived = DateTime.UtcNow;
+        Interlocked.Exchange(ref _lastHeartbeatTicks, DateTime.UtcNow.Ticks);
     }
 }

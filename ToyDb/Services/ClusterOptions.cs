@@ -2,7 +2,7 @@ namespace ToyDb.Services;
 
 public class ClusterOptions
 {
-    public static readonly string Key = "Cluster";
+    public const string Key = "Cluster";
 
     public required string NodeId { get; set; }
 
@@ -10,7 +10,9 @@ public class ClusterOptions
 
     public required List<string> PeerAddresses { get; set; }
 
-    public int ElectionTimeoutMs { get; set; } = 5000;
+    public string? SelfAddress { get; set; }
 
-    public int HeartbeatIntervalMs { get; set; } = 1500;
+    public int ElectionTimeoutMs { get; set; }
+
+    public int HeartbeatIntervalMs { get; set; }
 }
