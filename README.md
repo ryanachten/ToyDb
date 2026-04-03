@@ -12,6 +12,8 @@ graph TD
         RS[RoutingService]
         HP[HealthProbeService]
         DLQ[DeadLetterQueueService]
+        PM[PartitionManager]
+        CC[ClusterClient]
     end
 
     subgraph P1["Partition 1 (3 replicas)"]
@@ -41,6 +43,7 @@ graph TD
     RS -- "consistent-hashing-based<br/>partitioning" --> P1
     RS -- "consistent-hashing-based<br/>partitioning" --> P2
     HP -. "health checks" .-> P1R1 & P1R2 & P1R3 & P2R1 & P2R2 & P2R3
+    PM -. "role discovery<br/>(GetRole RPC)" .-> P1R1 & P1R2 & P1R3 & P2R1 & P2R2 & P2R3
     DLQ -. "retry failed writes" .-> P1 & P2
 
     P1R1 -. "term-based<br/>leader election" .-> P1R2 & P1R3
@@ -131,7 +134,7 @@ The current capabilities we aim to explore are:
 - When a secondary replica restarts or comes online after being offline, it automatically syncs missed writes from its partition's primary via the replication log stream. This ensures the secondary remains consistent with the primary after being offline.
 - On startup, the secondary compares its local LSN with the primary's and pulls any missing entries. Catch-up failures are logged but do not prevent the node from starting.
 
-### Leader Election (High Availability)
+### Leader Election
 
 - ToyDb uses term-based leader election for automatic failover. Nodes track a monotonically increasing term number, and when a secondary detects primary failure (via replication stream disconnect or health probe timeout), it initiates an election.
 - The secondary with the highest last-applied LSN wins the election (most up-to-date data takes priority). Ties are broken by node ID lexicographic order.

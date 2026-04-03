@@ -52,6 +52,16 @@ public class RoutingOptions
     /// Dead-letter queue configuration for retrying failed secondary writes
     /// </summary>
     public DeadLetterOptions DeadLetterOptions { get; set; } = new();
+
+    /// <summary>
+    /// Interval (in seconds) between primary discovery scans
+    /// </summary>
+    public int PrimaryDiscoveryIntervalSeconds { get; set; } = 10;
+
+    /// <summary>
+    /// Unique identifier for this router instance (used for routing redundancy)
+    /// </summary>
+    public string RouterInstanceId { get; set; } = Environment.MachineName;
 }
 
 public class RetryOptions

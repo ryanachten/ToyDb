@@ -84,6 +84,19 @@ public class ClusterService(
         return Task.FromResult(new HeartbeatResponse { Term = request.Term, Success = true });
     }
 
+    public override Task<GetRoleResponse> GetRole(GetRoleRequest request, ServerCallContext context)
+    {
+        var role = replicaState.IsPrimary ? NodeRoleType.Primary : NodeRoleType.Secondary;
+
+        return Task.FromResult(new GetRoleResponse
+        {
+            Role = role,
+            Term = replicaState.CurrentTerm,
+            LeaderId = replicaState.LeaderId ?? string.Empty,
+            LeaderAddress = replicaState.LeaderAddress ?? string.Empty
+        });
+    }
+
     private long GetLocalLsn()
     {
         return lsnProvider.Current;

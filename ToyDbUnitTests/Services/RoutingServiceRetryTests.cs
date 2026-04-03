@@ -1,6 +1,7 @@
 using System.Reflection;
 using AutoMapper;
 using Grpc.Health.V1;
+using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -18,6 +19,7 @@ public class RoutingServiceRetryTests
     private readonly Mock<ILogger<RoutingService>> _loggerMock;
     private readonly Mock<IMapper> _mapperMock;
     private readonly Mock<INtpService> _ntpServiceMock;
+    private readonly Mock<PartitionManager> _partitionManagerMock;
     private readonly HealthProbeService _healthProbeService;
     private readonly DeadLetterQueueService _deadLetterQueueService;
     private readonly ConsistentHashRing _ring;
@@ -29,6 +31,11 @@ public class RoutingServiceRetryTests
         _loggerMock = new Mock<ILogger<RoutingService>>();
         _mapperMock = new Mock<IMapper>();
         _ntpServiceMock = new Mock<INtpService>();
+        _partitionManagerMock = new Mock<PartitionManager>(
+            new Mock<IOptions<RoutingOptions>>().Object,
+            new Mock<ILogger<PartitionManager>>().Object,
+            null!);
+        _partitionManagerMock.Setup(p => p.TriggerRediscovery(It.IsAny<string>()));
 
         var routingOptions = new RoutingOptions
         {
@@ -54,7 +61,7 @@ public class RoutingServiceRetryTests
 
         _ring = new ConsistentHashRing(_routingOptionsMock.Object, new Mock<ILogger<ConsistentHashRing>>().Object);
 
-        _service = new RoutingService(_routingOptionsMock.Object, _loggerMock.Object, _mapperMock.Object, _ntpServiceMock.Object, _healthProbeService, _deadLetterQueueService, _ring);
+        _service = new RoutingService(_routingOptionsMock.Object, _loggerMock.Object, _mapperMock.Object, _ntpServiceMock.Object, _healthProbeService, _deadLetterQueueService, _ring, _partitionManagerMock.Object);
     }
 
     [Fact]
@@ -108,6 +115,27 @@ public class RoutingServiceRetryTests
             partition,
             "testKey",
             WriteOperationType.Write));
+    }
+
+    [Fact]
+    public async Task GivenPrimaryFailsWithFailedPrecondition_WhenExecuteWithReplicaThresholdAsync_ThenTriggersRediscovery()
+    {
+        // Arrange
+        var primaryMock = new Mock<ReplicaClient>();
+        var partition = CreateTestPartition(primaryMock);
+
+        primaryMock.Setup(p => p.SetValue(It.IsAny<KeyValueRequest>()))
+            .ThrowsAsync(new RpcException(new Status(StatusCode.FailedPrecondition, "Not primary")));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<RpcException>(() => _service.ExecuteWithReplicaThresholdAsync(
+            () => primaryMock.Object.SetValue(new KeyValueRequest()),
+            (replica, index) => Task.CompletedTask,
+            partition,
+            "testKey",
+            WriteOperationType.Write));
+
+        _partitionManagerMock.Verify(p => p.TriggerRediscovery("test"), Times.Once);
     }
 
     [Fact]
@@ -183,7 +211,7 @@ public class RoutingServiceRetryTests
             new Mock<ILogger<DeadLetterQueueService>>().Object,
             _routingOptionsMock.Object);
         var ring = new ConsistentHashRing(_routingOptionsMock.Object, new Mock<ILogger<ConsistentHashRing>>().Object);
-        var service = new RoutingService(_routingOptionsMock.Object, _loggerMock.Object, _mapperMock.Object, _ntpServiceMock.Object, _healthProbeService, deadLetterQueueService, ring);
+        var service = new RoutingService(_routingOptionsMock.Object, _loggerMock.Object, _mapperMock.Object, _ntpServiceMock.Object, _healthProbeService, deadLetterQueueService, ring, _partitionManagerMock.Object);
 
         var primaryMock = new Mock<ReplicaClient>();
         var partition = CreateTestPartition(primaryMock);
