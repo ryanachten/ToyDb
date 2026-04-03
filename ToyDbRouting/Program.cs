@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using ToyDbRouting.Models;
 using ToyDbRouting.Services;
 using ToyDbRouting.Utilities;
@@ -12,13 +13,25 @@ builder.Services.AddGrpc();
 builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
 builder.Services.AddSingleton<HealthProbeService>();
 builder.Services.AddSingleton<DeadLetterQueueService>();
+builder.Services.AddSingleton<PartitionManager>();
 
 builder.Services.AddHostedService(provider => provider.GetRequiredService<HealthProbeService>());
 builder.Services.AddHostedService(provider => provider.GetRequiredService<DeadLetterQueueService>());
+builder.Services.AddHostedService(provider => provider.GetRequiredService<PartitionManager>());
 
 var app = builder.Build();
 
 app.MapGrpcService<RoutingService>();
+
+app.MapGet("/health", (IOptions<RoutingOptions> routingOptions) =>
+{
+    return Results.Ok(new
+    {
+        Status = "Healthy",
+        InstanceId = routingOptions.Value.RouterInstanceId,
+        Timestamp = DateTime.UtcNow
+    });
+});
 
 if (app.Environment.IsDevelopment())
 {

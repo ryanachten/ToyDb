@@ -19,10 +19,12 @@ public class RoutingService(
     INtpService ntpService,
     HealthProbeService healthProbeService,
     DeadLetterQueueService deadLetterQueueService,
-    ConsistentHashRing ring
+    ConsistentHashRing ring,
+    PartitionManager partitionManager
 ) : Routing.Routing.RoutingBase
 {
     private readonly ConsistentHashRing _ring = ring;
+    private readonly PartitionManager _partitionManager = partitionManager;
     private readonly int? completedSecondaryWritesThreshold = routingOptions.Value.CompletedSecondaryWritesThreshold;
 
     internal record ReplicaExecutionResult<TPrimaryResponse>
@@ -139,6 +141,13 @@ public class RoutingService(
                 logger,
                 $"Primary {operationName} for key {key}");
             replicasCompleted++;
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
+        {
+            logger.LogWarning("Primary replica {Operation} failed with FAILED_PRECONDITION for key {Key}: {Error}. Triggering primary rediscovery.",
+                operationName, key, ex.Message);
+            _partitionManager.TriggerRediscovery(partition.PartitionId);
+            throw;
         }
         catch (Exception ex)
         {

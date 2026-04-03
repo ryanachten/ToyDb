@@ -12,6 +12,8 @@ graph TD
         RS[RoutingService]
         HP[HealthProbeService]
         DLQ[DeadLetterQueueService]
+        PM[PartitionManager]
+        CC[ClusterClient]
     end
 
     subgraph P1["Partition 1 (3 replicas)"]
@@ -41,6 +43,7 @@ graph TD
     RS -- "consistent-hashing-based<br/>partitioning" --> P1
     RS -- "consistent-hashing-based<br/>partitioning" --> P2
     HP -. "health checks" .-> P1R1 & P1R2 & P1R3 & P2R1 & P2R2 & P2R3
+    PM -. "role discovery<br/>(GetRole RPC)" .-> P1R1 & P1R2 & P1R3 & P2R1 & P2R2 & P2R3
     DLQ -. "retry failed writes" .-> P1 & P2
 
     P1R1 -. "term-based<br/>leader election" .-> P1R2 & P1R3
