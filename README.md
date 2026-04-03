@@ -131,7 +131,7 @@ The current capabilities we aim to explore are:
 - When a secondary replica restarts or comes online after being offline, it automatically syncs missed writes from its partition's primary via the replication log stream. This ensures the secondary remains consistent with the primary after being offline.
 - On startup, the secondary compares its local LSN with the primary's and pulls any missing entries. Catch-up failures are logged but do not prevent the node from starting.
 
-### Leader Election (High Availability)
+### Leader Election
 
 - ToyDb uses term-based leader election for automatic failover. Nodes track a monotonically increasing term number, and when a secondary detects primary failure (via replication stream disconnect or health probe timeout), it initiates an election.
 - The secondary with the highest last-applied LSN wins the election (most up-to-date data takes priority). Ties are broken by node ID lexicographic order.

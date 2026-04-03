@@ -26,7 +26,17 @@ message HeartbeatResponse {
 	bool success = 2;
 }
 
+message GetRoleRequest {}
+
+message GetRoleResponse {
+	string role = 1;
+	int64 term = 2;
+	string leader_id = 3;
+	string leader_address = 4;
+}
+
 service Election {
 	rpc RequestVote (RequestVoteRequest) returns (VoteResponse);
 	rpc Heartbeat (HeartbeatRequest) returns (HeartbeatResponse);
+	rpc GetRole (GetRoleRequest) returns (GetRoleResponse);
 }

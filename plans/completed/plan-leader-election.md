@@ -1,7 +1,7 @@
-# Plan: Phase 3 — High Availability (Leader Election)
+# Plan: Phase 3 — Leader Election
 
 ## Scope
-This plan covers **Steps 1–5: node self-awareness and leader election**. Routing redundancy (Steps 6–7 from the original review) will be addressed in a follow-up plan (`plan-phase3b-routing-redundancy.md`).
+This plan covers **Steps 1–5: node self-awareness and leader election**. Routing redundancy (Steps 6–7 from the original review) will be addressed in a follow-up plan (`plan-routing-redundancy.md`).
 
 ## Objective
 Enable ToyDb to survive primary node failures through node self-awareness and leader election, eliminating static role assignment.
@@ -134,7 +134,7 @@ Two complementary mechanisms:
 **Files:**
 - New test files in `ToyDb.Tests.Integration/`
 
-## Deferred to Follow-Up (`plan-phase3b-routing-redundancy.md`)
+## Deferred to Follow-Up (`plan-routing-redundancy.md`)
 - Step 6 (original): Routing layer dynamic primary discovery
 - Step 7 (original): Routing layer redundancy (multiple routing instances, client failover)
 
