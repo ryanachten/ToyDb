@@ -7,7 +7,7 @@ using ToyDbRouting.Clients;
 
 namespace ToyDbIntegrationTests.Tests;
 
-public class ElectionTests
+public class ElectionTests(RoutingClient _routingClient)
 {
     private const string RoutingAddress = "https://localhost:8081";
     private const string P1R1Address = "https://localhost:8083";
@@ -17,11 +17,14 @@ public class ElectionTests
     private const string P2R2Address = "https://localhost:8089";
     private const string P2R3Address = "https://localhost:8093";
 
-    private readonly RoutingClient _routingClient;
-
-    public ElectionTests()
+    private static GrpcChannel CreateInsecureChannel(string address)
     {
-        _routingClient = new RoutingClient(RoutingAddress, IntegrationTestConfig.SkipCertificateValidation);
+        var handler = new System.Net.Http.HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback =
+                System.Net.Http.HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+        };
+        return GrpcChannel.ForAddress(address, new GrpcChannelOptions { HttpHandler = handler });
     }
 
     [Fact]
@@ -69,16 +72,7 @@ public class ElectionTests
     [Fact]
     public async Task GivenSecondaryNodes_WhenVoteRequested_ThenVoteIsGrantedForValidCandidate()
     {
-        var handler = new System.Net.Http.HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback =
-                System.Net.Http.HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-        };
-
-        using var channel = GrpcChannel.ForAddress(P1R2Address, new GrpcChannelOptions
-        {
-            HttpHandler = handler
-        });
+        using var channel = CreateInsecureChannel(P1R2Address);
 
         var client = new Election.ElectionClient(channel);
 
@@ -92,21 +86,14 @@ public class ElectionTests
         var response = await client.RequestVoteAsync(request);
 
         Assert.NotNull(response);
+        Assert.True(response.Granted);
+        Assert.Equal(9999, response.Term);
     }
 
     [Fact]
     public async Task GivenHeartbeatSent_WhenTermIsValid_ThenHeartbeatIsAccepted()
     {
-        var handler = new System.Net.Http.HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback =
-                System.Net.Http.HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-        };
-
-        using var channel = GrpcChannel.ForAddress(P1R2Address, new GrpcChannelOptions
-        {
-            HttpHandler = handler
-        });
+        using var channel = CreateInsecureChannel(P1R2Address);
 
         var client = new Election.ElectionClient(channel);
 

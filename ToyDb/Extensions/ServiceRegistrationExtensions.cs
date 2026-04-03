@@ -49,6 +49,9 @@ public static class ServiceRegistrationExtensions
         builder.Services.Configure<LogCompactionOptions>(
             builder.Configuration.GetSection(LogCompactionOptions.Key));
 
+        builder.Services.Configure<SecondaryCatchUpOptions>(
+            builder.Configuration.GetSection(SecondaryCatchUpOptions.Key));
+
         builder.Services.AddHostedService<SecondaryCatchUpService>();
 
         builder.Services.AddHostedService<ElectionService>();

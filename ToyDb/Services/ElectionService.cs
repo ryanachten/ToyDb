@@ -4,6 +4,10 @@ using ToyDbContracts.Election;
 
 namespace ToyDb.Services;
 
+/// <summary>
+/// Background service that implements Raft-like leader election for cluster high availability.
+/// Monitors primary health, initiates elections when the primary fails, and manages role transitions.
+/// </summary>
 public class ElectionService(
     ReplicaState replicaState,
     ILsnProvider lsnProvider,
@@ -29,14 +33,17 @@ public class ElectionService(
             return;
         }
 
-        if (_isPrimary)
+        while (!stoppingToken.IsCancellationRequested)
         {
-            replicaState.SetIsPrimary(true);
-            await RunPrimaryAsync(stoppingToken);
-        }
-        else
-        {
-            await RunSecondaryAsync(stoppingToken);
+            if (_isPrimary)
+            {
+                replicaState.SetIsPrimary(true);
+                await RunPrimaryAsync(stoppingToken);
+            }
+            else
+            {
+                await RunSecondaryAsync(stoppingToken);
+            }
         }
     }
 
@@ -46,10 +53,18 @@ public class ElectionService(
             "Node {NodeId} starting as primary for partition {PartitionId}, term {Term}",
             _cluster.NodeId, _cluster.PartitionId, replicaState.CurrentTerm);
 
-        while (!stoppingToken.IsCancellationRequested)
+        while (!stoppingToken.IsCancellationRequested && _isPrimary)
         {
             await SendHeartbeatsAsync(stoppingToken);
+            if (!_isPrimary) break;
             await Task.Delay(_cluster.HeartbeatIntervalMs, stoppingToken);
+        }
+
+        if (!_isPrimary)
+        {
+            logger.LogInformation(
+                "Node {NodeId} stepped down from primary for partition {PartitionId}",
+                _cluster.NodeId, _cluster.PartitionId);
         }
     }
 
@@ -67,6 +82,14 @@ public class ElectionService(
             {
                 logger.LogWarning("Primary unhealthy, starting election");
                 await RunElectionAsync(stoppingToken);
+
+                if (_isPrimary)
+                {
+                    logger.LogInformation(
+                        "Node {NodeId} won election, transitioning to leader behavior",
+                        _cluster.NodeId);
+                    return;
+                }
             }
 
             await Task.Delay(_cluster.HeartbeatIntervalMs, stoppingToken);
@@ -150,7 +173,7 @@ public class ElectionService(
             {
                 Term = term,
                 NodeId = _cluster.NodeId,
-                LastLsn = lsnProvider.Next() - 1
+                LastLsn = lsnProvider.Current
             };
 
             var response = await client.RequestVoteAsync(request, cancellationToken: stoppingToken);
@@ -205,7 +228,8 @@ public class ElectionService(
             {
                 Term = replicaState.CurrentTerm,
                 LeaderId = _cluster.NodeId,
-                CommitLsn = lsnProvider.Next() - 1
+                LeaderAddress = _cluster.SelfAddress ?? "",
+                CommitLsn = lsnProvider.Current
             };
 
             var response = await client.HeartbeatAsync(request, cancellationToken: stoppingToken);
@@ -217,6 +241,8 @@ public class ElectionService(
                     peerAddress, response.Term, replicaState.CurrentTerm);
                 replicaState.SetTerm(response.Term);
                 replicaState.ResetVote();
+                _isPrimary = false;
+                replicaState.SetIsPrimary(false);
             }
         }
         catch (Exception ex)

@@ -9,6 +9,10 @@ using ToyDbContracts.Data;
 
 namespace ToyDb.Services.SecondaryCatchUp;
 
+/// <summary>
+/// Background service that handles secondary catch-up from the primary replica.
+/// Monitors leader changes, connects to the current primary, and replays WAL entries to catch up on missed writes.
+/// </summary>
 public class SecondaryCatchUpService(
     ILsnProvider lsnProvider,
     IDataStoreRepository storeRepository,
@@ -18,12 +22,13 @@ public class SecondaryCatchUpService(
     ReplicaState replicaState,
     IOptions<ReplicaOptions> replicaOptions,
     IOptions<ClusterOptions> clusterOptions,
+    IOptions<SecondaryCatchUpOptions> catchUpOptions,
     ILogger<SecondaryCatchUpService> logger
 ) : BackgroundService
 {
-    private const int MaxRetryAttempts = 3;
-    private static readonly TimeSpan BaseRetryDelay = TimeSpan.FromSeconds(1);
-    private static readonly TimeSpan ReconnectDelay = TimeSpan.FromSeconds(2);
+    private readonly int _maxRetryAttempts = catchUpOptions.Value.MaxRetryAttempts;
+    private readonly TimeSpan _baseRetryDelay = TimeSpan.FromSeconds(catchUpOptions.Value.BaseRetryDelaySeconds);
+    private readonly TimeSpan _reconnectDelay = TimeSpan.FromSeconds(catchUpOptions.Value.ReconnectDelaySeconds);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -52,7 +57,7 @@ public class SecondaryCatchUpService(
             if (string.IsNullOrWhiteSpace(primaryAddress))
             {
                 logger.LogWarning("No primary address available, waiting for leader election");
-                await Task.Delay(ReconnectDelay, stoppingToken);
+                await Task.Delay(_reconnectDelay, stoppingToken);
                 continue;
             }
 
@@ -78,7 +83,7 @@ public class SecondaryCatchUpService(
                 logger.LogWarning(ex,
                     "Replication stream from {PrimaryAddress} ended, will reconnect",
                     primaryAddress);
-                await Task.Delay(ReconnectDelay, stoppingToken);
+                await Task.Delay(_reconnectDelay, stoppingToken);
             }
         }
     }
@@ -95,7 +100,7 @@ public class SecondaryCatchUpService(
 
     private async Task CatchUpWithRetryAsync(string primaryAddress, CancellationToken stoppingToken)
     {
-        for (var attempt = 1; attempt <= MaxRetryAttempts; attempt++)
+        for (var attempt = 1; attempt <= _maxRetryAttempts; attempt++)
         {
             try
             {
@@ -107,19 +112,19 @@ public class SecondaryCatchUpService(
                 logger.LogInformation("Catch-up cancelled");
                 return;
             }
-            catch (Exception ex) when (attempt < MaxRetryAttempts)
+            catch (Exception ex) when (attempt < _maxRetryAttempts)
             {
-                var delay = TimeSpan.FromTicks(BaseRetryDelay.Ticks * (1 << (attempt - 1)));
+                var delay = TimeSpan.FromTicks(_baseRetryDelay.Ticks * (1 << (attempt - 1)));
                 logger.LogWarning(ex,
                     "Catch-up attempt {Attempt}/{MaxAttempts} failed, retrying in {Delay}",
-                    attempt, MaxRetryAttempts, delay);
+                    attempt, _maxRetryAttempts, delay);
                 await Task.Delay(delay, stoppingToken);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex,
                     "Catch-up from primary {PrimaryAddress} failed after {MaxAttempts} attempts",
-                    primaryAddress, MaxRetryAttempts);
+                    primaryAddress, _maxRetryAttempts);
                 throw;
             }
         }

@@ -18,6 +18,7 @@ message HeartbeatRequest {
 	int64 term = 1;
 	string leader_id = 2;
 	int64 commit_lsn = 3;
+	string leader_address = 4;
 }
 
 message HeartbeatResponse {

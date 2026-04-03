@@ -4,6 +4,10 @@ using ToyDbContracts.Election;
 
 namespace ToyDb.Services;
 
+/// <summary>
+/// gRPC service that handles inter-node cluster communication for leader election.
+/// Implements RequestVote and Heartbeat RPCs for Raft-like consensus algorithm.
+/// </summary>
 public class ClusterService(
     ReplicaState replicaState,
     ILsnProvider lsnProvider,
@@ -74,7 +78,7 @@ public class ClusterService(
             replicaState.ResetVote();
         }
 
-        replicaState.SetLeader(request.LeaderId, null);
+        replicaState.SetLeader(request.LeaderId, request.LeaderAddress);
         replicaState.UpdateHeartbeatReceived();
 
         return Task.FromResult(new HeartbeatResponse { Term = request.Term, Success = true });
@@ -82,6 +86,6 @@ public class ClusterService(
 
     private long GetLocalLsn()
     {
-        return lsnProvider.Next() - 1;
+        return lsnProvider.Current;
     }
 }
