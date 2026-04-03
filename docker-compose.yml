@@ -12,39 +12,125 @@ services:
     - toydb-p2-r1
     - toydb-p2-r2
     - toydb-p2-r3
+    ports:
+      - "8081:8081"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/diagnostics/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
   toydb-p1-r1:
     container_name: toydb-p1-r1
     image: ${DOCKER_REGISTRY-}toydb
     build:
       context: .
       dockerfile: ToyDb/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/diagnostics/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
   toydb-p1-r2:
     container_name: toydb-p1-r2
     image: ${DOCKER_REGISTRY-}toydb
     build:
       context: .
       dockerfile: ToyDb/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/diagnostics/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
   toydb-p2-r1:
     container_name: toydb-p2-r1
     image: ${DOCKER_REGISTRY-}toydb
     build:
       context: .
       dockerfile: ToyDb/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/diagnostics/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
   toydb-p2-r2:
     container_name: toydb-p2-r2
     image: ${DOCKER_REGISTRY-}toydb
     build:
       context: .
       dockerfile: ToyDb/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/diagnostics/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
   toydb-p1-r3:
     container_name: toydb-p1-r3
     image: ${DOCKER_REGISTRY-}toydb
     build:
       context: .
       dockerfile: ToyDb/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/diagnostics/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
   toydb-p2-r3:
     container_name: toydb-p2-r3
     image: ${DOCKER_REGISTRY-}toydb
     build:
       context: .
       dockerfile: ToyDb/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/diagnostics/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
