@@ -16,9 +16,21 @@ public class ReplicaState(IOptions<ReplicaOptions> replicaOptions)
 
     public string? VotedFor => _votedFor;
 
-    public string? LeaderId => _leaderId;
+    public string? LeaderId
+    {
+        get
+        {
+            lock (_leaderLock) { return _leaderId; }
+        }
+    }
 
-    public string? LeaderAddress => _leaderAddress;
+    public string? LeaderAddress
+    {
+        get
+        {
+            lock (_leaderLock) { return _leaderAddress; }
+        }
+    }
 
     public DateTime LastHeartbeatReceived => new(Interlocked.Read(ref _lastHeartbeatTicks));
 

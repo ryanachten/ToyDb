@@ -32,7 +32,7 @@ public class SecondaryCatchUpService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (replicaOptions.Value.Role != ReplicaRole.Secondary && !replicaState.IsPrimary)
+        if (replicaOptions.Value.Role == ReplicaRole.Secondary && !replicaState.IsPrimary)
         {
             logger.LogInformation("Node is a secondary, will monitor for leader changes");
         }
