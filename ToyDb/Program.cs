@@ -6,8 +6,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddGrpc(options =>
 {
-    options.MaxReceiveMessageSize = 100 * 1024 * 1024;
-    options.MaxSendMessageSize = 100 * 1024 * 1024;
+    options.MaxReceiveMessageSize = 500 * 1024 * 1024;
+    options.MaxSendMessageSize = 500 * 1024 * 1024;
 });
 builder.Services.AddGrpcHealthChecks()
     // TODO: should this do something more meaningful
