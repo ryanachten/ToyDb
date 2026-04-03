@@ -7,7 +7,7 @@ using ToyDbRouting.Clients;
 
 namespace ToyDbIntegrationTests.Tests;
 
-public class ElectionTests(RoutingClient _routingClient)
+public class ElectionTests
 {
     private const string RoutingAddress = "https://localhost:8081";
     private const string P1R1Address = "https://localhost:8083";
@@ -16,6 +16,10 @@ public class ElectionTests(RoutingClient _routingClient)
     private const string P2R1Address = "https://localhost:8087";
     private const string P2R2Address = "https://localhost:8089";
     private const string P2R3Address = "https://localhost:8093";
+
+    private readonly RoutingClient _routingClient;
+
+    public ElectionTests() => _routingClient = new(RoutingAddress, IntegrationTestConfig.SkipCertificateValidation);
 
     private static GrpcChannel CreateInsecureChannel(string address)
     {
