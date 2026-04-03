@@ -6,7 +6,32 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
 jobs:
+  mega-lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: MegaLinter
+        uses: oxsecurity/megalinter/flavors/security@b48455a119cc28045eee8f1e9d0a542a85e71f4f
+        env:
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHOW_ELAPSED_TIME: "true"
+          DOTNET_FILTER_MODE: "none"
+          SARIF_REPORTER: "true"
+
   build-and-test:
     runs-on: ubuntu-latest
     steps:
