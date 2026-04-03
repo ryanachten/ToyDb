@@ -8,8 +8,13 @@ namespace ToyDbRouting.Models;
 public class Partition(PartitionConfiguration config)
 {
     public string PartitionId => config.PartitionId;
-    public readonly ReplicaClient PrimaryReplica = new(config.PrimaryReplicaAddress);
+    public ReplicaClient PrimaryReplica { get; private set; } = new(config.PrimaryReplicaAddress);
     public readonly ImmutableArray<ReplicaClient> SecondaryReplicas = config.SecondaryReplicaAddresses.Select(s => new ReplicaClient(s)).ToImmutableArray();
+
+    public void UpdatePrimary(ReplicaClient newPrimary)
+    {
+        PrimaryReplica = newPrimary;
+    }
 
     // TODO: not sure if this is the best algo for this. Should we be selecting random secondaries?
     // Probably not, we might need to check for data consistency etc if we're doing eventual consistency
