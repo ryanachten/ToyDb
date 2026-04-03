@@ -1,12 +1,13 @@
 ## Guiding princples
 - Optimise for performance while maintaining readability
-- Align with idiomatic database design principles.
+- Align with idiomatic database design principles
     - Flag any concerns with proposed design choices if you think they violate idiomatic database design principles
 
 ## Code conventions
 - DO NOT remove any **existing** comments unless instructed to do so (but do update them if they're outdated)
 - DO NOT add any comments unless explicitly instructed to do so
 - DO NOT update README files unless explicitly instructed to do so
+- Commit changes at logical steps, rather than all changes in a single large commit
 - Ensure dotnet format suggestions are addressed
 - Ensure the architecture diagram in the [README](./README.md) is updated when making changes to the architecture
 - Avoid string interpolation in our logs, prefer to use message templates instead, i.e
@@ -14,6 +15,9 @@
     - Do use: `logger.LogInformation("Health status changed for {Address}: {Previous} -> {Status}", address, previous, status);`
 - Use primary constructors where possible
 - Use collection instantiation where possible
+- Ensure that values that may warrant user configurability, such as delays, intervals, retries etc, are defined in configuration and exposed in appsettings.
+   - These should be defined using the .NET options pattern
+   - Default values should be defined in appsettings, not in the options class itself
 
 ## Tests
 - Always ensure tests pass when making changes

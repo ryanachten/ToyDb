@@ -14,14 +14,16 @@ graph TD
         DLQ[DeadLetterQueueService]
     end
 
-    subgraph P1["Partition 1"]
-        P1R1["Primary Replica (p1-r1)"]
-        P1R2["Secondary Replica (p1-r2)"]
+    subgraph P1["Partition 1 (3 replicas)"]
+        P1R1["Primary (p1-r1)"]
+        P1R2["Secondary (p1-r2)"]
+        P1R3["Secondary (p1-r3)"]
     end
 
-    subgraph P2["Partition 2"]
-        P2R1["Primary Replica (p2-r1)"]
-        P2R2["Secondary Replica (p2-r2)"]
+    subgraph P2["Partition 2 (3 replicas)"]
+        P2R1["Primary (p2-r1)"]
+        P2R2["Secondary (p2-r2)"]
+        P2R3["Secondary (p2-r3)"]
     end
 
     subgraph Node["ToyDb Node (per replica)"]
@@ -31,21 +33,27 @@ graph TD
         WAL[Write-Ahead Log]
         AOL[Append-only Log]
         LC[Log Compaction]
+        ES[ElectionService]
+        RS[ReplicaState]
     end
 
     Client -- "gRPC (Protobuf)" --> RS
     RS -- "consistent-hashing-based<br/>partitioning" --> P1
     RS -- "consistent-hashing-based<br/>partitioning" --> P2
-    HP -. "health checks" .-> P1R1 & P1R2 & P2R1 & P2R2
+    HP -. "health checks" .-> P1R1 & P1R2 & P1R3 & P2R1 & P2R2 & P2R3
     DLQ -. "retry failed writes" .-> P1 & P2
 
-    P1R1 -- "replication" --> P1R2
-    P2R1 -- "replication" --> P2R2
+    P1R1 -. "term-based<br/>leader election" .-> P1R2 & P1R3
+    P2R1 -. "term-based<br/>leader election" .-> P2R2 & P2R3
+
+    P1R1 -- "replication stream" --> P1R2 & P1R3
+    P2R1 -- "replication stream" --> P2R2 & P2R3
 
     CS --> WS & ReadS
     WS --> WAL & AOL
     ReadS --> AOL
     LC -. "compaction" .-> AOL
+    ES -. "election" .-> RS
 ```
 
 The database is currently a simple key-value store which receives commands using gRPC.
@@ -115,5 +123,17 @@ The current capabilities we aim to explore are:
 ### Replication
 
 - ToyDb uses leader replication, where a primary replica handles writes and secondary replicas handle reads. The use of a leader for writes helps prevent write concurrency and ordering issues. The delegation of write and read requests to replicas is handled by the client based on specified configuration.
-- Writes are asynchronously propagated to all secondary replicas. The number of replicas who response will be awaited is a configurable threshold. Higher thresholds result in higher data consistency across replicas at the cost of higher write latency. Lower thresholds result in lower write latency at the cost of data consistency across replicas. This is trade-off to be determined by users.
-- In case of write failures, ToyDb has a configurable retry policy. The configuration of these retries is determined by the needs of the user. Primary write retries ensure higher reliability at the cost of latency, while secondary write reties ensure better replica consistency at the cost of latency. 
+- Writes are asynchronously propagated to all secondary replicas via replication log streaming. The number of replicas who respond is a configurable threshold. Higher thresholds result in higher data consistency across replicas at the cost of higher write latency. Lower thresholds result in lower write latency at the cost of data consistency across replicas. This is a trade-off to be determined by users.
+- In case of write failures, ToyDb has a configurable retry policy. The configuration of these retries is determined by the needs of the user. Primary write retries ensure higher reliability at the cost of latency, while secondary write retries ensure better replica consistency at the cost of latency.
+
+### Secondary Catch-Up
+
+- When a secondary replica restarts or comes online after being offline, it automatically syncs missed writes from its partition's primary via the replication log stream. This ensures the secondary remains consistent with the primary after being offline.
+- On startup, the secondary compares its local LSN with the primary's and pulls any missing entries. Catch-up failures are logged but do not prevent the node from starting.
+
+### Leader Election (High Availability)
+
+- ToyDb uses term-based leader election for automatic failover. Nodes track a monotonically increasing term number, and when a secondary detects primary failure (via replication stream disconnect or health probe timeout), it initiates an election.
+- The secondary with the highest last-applied LSN wins the election (most up-to-date data takes priority). Ties are broken by node ID lexicographic order.
+- A majority of 2 out of 3 replicas is required to win an election, allowing failover even when one node is down.
+- The elected node transitions to primary and begins accepting writes; losers remain secondaries and connect to the new primary's replication stream. 
