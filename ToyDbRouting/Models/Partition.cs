@@ -42,10 +42,10 @@ public class Partition(PartitionConfiguration config)
 
     private ReplicaClient? GetHealthyPrimaryReplica(IReadOnlyDictionary<string, ServingStatus> healthStates)
     {
-        var hasPrimaryHealth = healthStates.TryGetValue(PrimaryReplica.Address, out var health);
+        var primary = PrimaryReplica;
+        var hasPrimaryHealth = healthStates.TryGetValue(primary.Address, out var health);
 
-        // Optimistically even if health check hasn't completed yet, assuming it will become healthy
-        if (!hasPrimaryHealth || health == ServingStatus.Serving) return PrimaryReplica;
+        if (!hasPrimaryHealth || health == ServingStatus.Serving) return primary;
 
         return null;
     }

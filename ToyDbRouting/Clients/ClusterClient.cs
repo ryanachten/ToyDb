@@ -3,9 +3,10 @@ using ToyDbContracts.Election;
 
 namespace ToyDbRouting.Clients;
 
-public class ClusterClient
+public class ClusterClient : IDisposable
 {
     public string Address { get; }
+    private readonly GrpcChannel _channel;
     private readonly Election.ElectionClient _electionClient;
 
     public ClusterClient(string address)
@@ -16,16 +17,19 @@ public class ClusterClient
             ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
         };
 
-        var channel = GrpcChannel.ForAddress(address, new GrpcChannelOptions
+        _channel = GrpcChannel.ForAddress(address, new GrpcChannelOptions
         {
             HttpHandler = handler
         });
-        _electionClient = new Election.ElectionClient(channel);
+        _electionClient = new Election.ElectionClient(_channel);
     }
 
     public async Task<NodeRole> GetRole(CancellationToken cancellationToken = default)
     {
-        var response = await _electionClient.GetRoleAsync(new GetRoleRequest(), cancellationToken: cancellationToken);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(TimeSpan.FromSeconds(5));
+
+        var response = await _electionClient.GetRoleAsync(new GetRoleRequest(), cancellationToken: cts.Token);
         return new NodeRole
         {
             Role = response.Role,
@@ -34,14 +38,19 @@ public class ClusterClient
             LeaderAddress = response.LeaderAddress
         };
     }
+
+    public void Dispose()
+    {
+        _channel.Dispose();
+    }
 }
 
 public class NodeRole
 {
-    public string Role { get; init; } = string.Empty;
+    public NodeRoleType Role { get; init; }
     public long Term { get; init; }
     public string LeaderId { get; init; } = string.Empty;
     public string LeaderAddress { get; init; } = string.Empty;
 
-    public bool IsPrimary => Role == "Primary";
+    public bool IsPrimary => Role == NodeRoleType.Primary;
 }

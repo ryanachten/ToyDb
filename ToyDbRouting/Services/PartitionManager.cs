@@ -17,8 +17,31 @@ public class PartitionManager(
     private readonly Dictionary<string, ReplicaClient> _replicaClients = [];
 
     private readonly ConcurrentDictionary<string, ReplicaClient> _primaryReplicas = new();
+    private readonly ConcurrentDictionary<string, bool> _pendingRediscovery = new();
 
     public IReadOnlyDictionary<string, ReplicaClient> PrimaryReplicas => _primaryReplicas;
+
+    public virtual void TriggerRediscovery(string partitionId)
+    {
+        if (_pendingRediscovery.TryAdd(partitionId, true))
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await DiscoverSinglePartitionPrimaryAsync(partitionId, CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error triggering rediscovery for partition {PartitionId}", partitionId);
+                }
+                finally
+                {
+                    _pendingRediscovery.TryRemove(partitionId, out _);
+                }
+            });
+        }
+    }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -66,45 +89,53 @@ public class PartitionManager(
     {
         foreach (var partitionConfig in _options.Partitions)
         {
-            var allReplicas = new[] { partitionConfig.PrimaryReplicaAddress }.Concat(partitionConfig.SecondaryReplicaAddresses);
+            await DiscoverSinglePartitionPrimaryAsync(partitionConfig.PartitionId, cancellationToken);
+        }
+    }
 
-            ReplicaClient? newPrimary = null;
+    private async Task DiscoverSinglePartitionPrimaryAsync(string partitionId, CancellationToken cancellationToken)
+    {
+        var partitionConfig = _options.Partitions.FirstOrDefault(p => p.PartitionId == partitionId);
+        if (partitionConfig == null) return;
 
-            foreach (var address in allReplicas)
+        var allReplicas = new[] { partitionConfig.PrimaryReplicaAddress }.Concat(partitionConfig.SecondaryReplicaAddresses);
+
+        ReplicaClient? newPrimary = null;
+
+        foreach (var address in allReplicas)
+        {
+            if (!_replicaClients.TryGetValue(address, out var client))
+                continue;
+
+            try
             {
-                if (!_replicaClients.TryGetValue(address, out var client))
-                    continue;
+                using var clusterClient = new Clients.ClusterClient(address);
+                var role = await clusterClient.GetRole(cancellationToken);
 
-                try
+                if (role.IsPrimary)
                 {
-                    var clusterClient = new Clients.ClusterClient(address);
-                    var role = await clusterClient.GetRole(cancellationToken);
-
-                    if (role.IsPrimary)
-                    {
-                        newPrimary = client;
-                        break;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Failed to get role from replica {Address}", address);
+                    newPrimary = client;
+                    break;
                 }
             }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to get role from replica {Address}", address);
+            }
+        }
 
-            if (newPrimary != null)
-            {
-                _primaryReplicas[partitionConfig.PartitionId] = newPrimary;
-                UpdatePartitionPrimary(partitionConfig.PartitionId, newPrimary);
-            }
-            else
-            {
-                logger.LogWarning("No primary found for partition {PartitionId}, using configured primary", partitionConfig.PartitionId);
-                if (!_replicaClients.TryGetValue(partitionConfig.PrimaryReplicaAddress, out var fallbackPrimary))
-                    fallbackPrimary = new ReplicaClient(partitionConfig.PrimaryReplicaAddress);
-                _primaryReplicas[partitionConfig.PartitionId] = fallbackPrimary;
-                UpdatePartitionPrimary(partitionConfig.PartitionId, fallbackPrimary);
-            }
+        if (newPrimary != null)
+        {
+            _primaryReplicas[partitionConfig.PartitionId] = newPrimary;
+            UpdatePartitionPrimary(partitionConfig.PartitionId, newPrimary);
+        }
+        else if (!_primaryReplicas.ContainsKey(partitionConfig.PartitionId))
+        {
+            logger.LogWarning("No primary found for partition {PartitionId}, using configured primary", partitionConfig.PartitionId);
+            if (!_replicaClients.TryGetValue(partitionConfig.PrimaryReplicaAddress, out var fallbackPrimary))
+                fallbackPrimary = new ReplicaClient(partitionConfig.PrimaryReplicaAddress);
+            _primaryReplicas[partitionConfig.PartitionId] = fallbackPrimary;
+            UpdatePartitionPrimary(partitionConfig.PartitionId, fallbackPrimary);
         }
     }
 
@@ -112,20 +143,5 @@ public class PartitionManager(
     {
         var partition = _ring.Partitions.FirstOrDefault(p => p.PartitionId == partitionId);
         partition?.UpdatePrimary(newPrimary);
-    }
-
-    public virtual void TriggerRediscovery(string partitionId)
-    {
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await DiscoverPrimaryReplicasAsync(CancellationToken.None);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error triggering rediscovery for partition {PartitionId}", partitionId);
-            }
-        });
     }
 }

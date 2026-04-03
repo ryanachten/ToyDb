@@ -44,7 +44,7 @@ Phase 1 (resilience/retries), Phase 2 (LSN catch-up), and Phase 3 (leader electi
 
 ### Primary Discovery Flow
 
-```
+```text
 RoutingService starts
   → PartitionManager initializes
     → For each partition, query all replicas for their role
@@ -53,12 +53,12 @@ RoutingService starts
   → On write failure to primary:
     → Re-query replicas to discover new primary
     → Update Partition.PrimaryReplica
-  → Background refresh every DiscoveryIntervalMs (default 10s)
+  → Background refresh every DiscoveryIntervalSeconds (default 10s)
 ```
 
 ### Routing Redundancy Flow
 
-```
+```text
 Client connects to load balancer (e.g., nginx)
   → Load balancer forwards to healthy router instance
   → Router processes request using ConsistentHashRing

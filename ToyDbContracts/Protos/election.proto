@@ -26,10 +26,16 @@ message HeartbeatResponse {
 	bool success = 2;
 }
 
+enum NodeRoleType {
+	NODE_ROLE_TYPE_UNKNOWN = 0;
+	NODE_ROLE_TYPE_PRIMARY = 1;
+	NODE_ROLE_TYPE_SECONDARY = 2;
+}
+
 message GetRoleRequest {}
 
 message GetRoleResponse {
-	string role = 1;
+	NodeRoleType role = 1;
 	int64 term = 2;
 	string leader_id = 3;
 	string leader_address = 4;

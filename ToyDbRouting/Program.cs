@@ -23,12 +23,19 @@ var app = builder.Build();
 
 app.MapGrpcService<RoutingService>();
 
-app.MapGet("/health", (IOptions<RoutingOptions> routingOptions) =>
+app.MapGet("/health", (IOptions<RoutingOptions> routingOptions, PartitionManager partitionManager) =>
 {
+    var primaries = partitionManager.PrimaryReplicas;
+    if (primaries.Count == 0)
+    {
+        return Results.StatusCode(503);
+    }
+
     return Results.Ok(new
     {
         Status = "Healthy",
         InstanceId = routingOptions.Value.RouterInstanceId,
+        DiscoveredPartitions = primaries.Count,
         Timestamp = DateTime.UtcNow
     });
 });

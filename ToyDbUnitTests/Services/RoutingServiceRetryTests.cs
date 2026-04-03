@@ -1,6 +1,7 @@
 using System.Reflection;
 using AutoMapper;
 using Grpc.Health.V1;
+using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -114,6 +115,27 @@ public class RoutingServiceRetryTests
             partition,
             "testKey",
             WriteOperationType.Write));
+    }
+
+    [Fact]
+    public async Task GivenPrimaryFailsWithFailedPrecondition_WhenExecuteWithReplicaThresholdAsync_ThenTriggersRediscovery()
+    {
+        // Arrange
+        var primaryMock = new Mock<ReplicaClient>();
+        var partition = CreateTestPartition(primaryMock);
+
+        primaryMock.Setup(p => p.SetValue(It.IsAny<KeyValueRequest>()))
+            .ThrowsAsync(new RpcException(new Status(StatusCode.FailedPrecondition, "Not primary")));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<RpcException>(() => _service.ExecuteWithReplicaThresholdAsync(
+            () => primaryMock.Object.SetValue(new KeyValueRequest()),
+            (replica, index) => Task.CompletedTask,
+            partition,
+            "testKey",
+            WriteOperationType.Write));
+
+        _partitionManagerMock.Verify(p => p.TriggerRediscovery("test"), Times.Once);
     }
 
     [Fact]

@@ -86,7 +86,7 @@ public class ClusterService(
 
     public override Task<GetRoleResponse> GetRole(GetRoleRequest request, ServerCallContext context)
     {
-        var role = replicaState.IsPrimary ? "Primary" : "Secondary";
+        var role = replicaState.IsPrimary ? NodeRoleType.Primary : NodeRoleType.Secondary;
 
         return Task.FromResult(new GetRoleResponse
         {
